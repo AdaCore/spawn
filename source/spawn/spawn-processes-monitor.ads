@@ -13,6 +13,10 @@
 -- General  Public  License  distributed  with  this  software;   see  file --
 -- COPYING3.  If not, go to http://www.gnu.org/licenses for a complete copy --
 -- of the license.                                                          --
+--                                                                          --
+-- As a special exception under Section 7 of GPL version 3, you are granted --
+-- additional permissions described in the GCC Runtime Library Exception,   --
+-- version 3.1, as published by the Free Software Foundation.               --
 ------------------------------------------------------------------------------
 
 private package Spawn.Processes.Monitor is
