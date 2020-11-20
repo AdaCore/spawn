@@ -1,0 +1,25 @@
+on: [push, pull_request]
+name: Build
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    name: Build
+    steps:
+      - name: Get Spawn
+        uses: actions/checkout@v2
+      - uses: actions/cache@v2
+        with:
+          path: ./cached_gnat
+          key: ${{ runner.os }}-gnat-2020.1
+          restore-keys: ${{ runner.os }}-gnat-2020.1
+      - name: Get GNAT Community 2020 toolchain
+        uses: ada-actions/toolchain@52618bd
+        with:
+          distrib: community
+          install_dir: ./cached_gnat
+      - name: Build and test
+        run: make all check
