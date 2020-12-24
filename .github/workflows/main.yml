@@ -9,6 +9,13 @@ jobs:
     runs-on: ${{ matrix.os }}
     name: Build
     steps:
+      - name: Initialize OS env and git autocrlf
+        shell: bash
+        run: |
+          git config --global core.autocrlf input
+          if [[ ${{ runner.os }} = macOS ]]; then
+              echo "OS=osx" >> $GITHUB_ENV
+          fi
       - name: Get Spawn
         uses: actions/checkout@v2
       - uses: actions/cache@v2
@@ -17,7 +24,7 @@ jobs:
           key: ${{ runner.os }}-gnat-2020.1
           restore-keys: ${{ runner.os }}-gnat-2020.1
       - name: Get GNAT Community 2020 toolchain
-        uses: ada-actions/toolchain@52618bd
+        uses: ada-actions/toolchain@ce2020
         with:
           distrib: community
           install_dir: ./cached_gnat

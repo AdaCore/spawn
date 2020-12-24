@@ -11,7 +11,7 @@ GPRINSTALL_FLAGS = --prefix=$(PREFIX) --sources-subdir=$(INSTALL_INCLUDE_DIR)\
  --lib-subdir=$(INSTALL_ALI_DIR) --project-subdir=$(INSTALL_PROJECT_DIR)\
  --link-lib-subdir=$(INSTALL_LIBRARY_DIR)
 
-SPAWN_TESTS=.obj/spawn_test/spawn_test
+SPAWN_TESTS=.obj/spawn_test/spawn_test .obj/spawn_test/spawn_unexpected
 
 all:
 	gprbuild $(GPRBUILD_FLAGS) -P gnat/spawn.gpr
