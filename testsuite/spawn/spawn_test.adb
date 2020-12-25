@@ -27,6 +27,7 @@
 --  If it's launched with some arguments, then it enumerates arguments to the
 --  stdout stream, echos one string from stdin to stderr and exits.
 
+with Ada.Characters.Latin_1;
 with Ada.Command_Line;
 with Ada.Directories;
 with Ada.Text_IO;
@@ -122,6 +123,8 @@ procedure Spawn_Test is
                end loop;
             end;
          end loop;
+
+         P.Close_Standard_Input;
       end Standard_Error_Available;
 
       overriding procedure Standard_Input_Available
@@ -142,8 +145,6 @@ procedure Spawn_Test is
 
          pragma Assert (Last = Data'Last);
          Self.Stdin := Ada.Strings.Unbounded.Null_Unbounded_String;
-
-         P.Close_Standard_Input;
       end Standard_Input_Available;
 
       overriding procedure Started (Self : in out Listener) is
@@ -196,7 +197,8 @@ begin
    end if;
 
    --  Otherwise launch a driven process.
-   L.Stdin := Ada.Strings.Unbounded.To_Unbounded_String ("Stdin sample");
+   L.Stdin := Ada.Strings.Unbounded.To_Unbounded_String
+     ("Stdin sample" & Ada.Characters.Latin_1.LF);
    Args.Append ("Hello_World");
    Args.Append ("space> <space");
 
