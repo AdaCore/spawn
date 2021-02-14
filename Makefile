@@ -17,7 +17,7 @@ all:
 	gprbuild $(GPRBUILD_FLAGS) -P gnat/spawn.gpr
 	gprbuild $(GPRBUILD_FLAGS) -P gnat/spawn_tests.gpr
 check:
-	export LD_LIBRARY_PATH=.libs; \
+	export LD_LIBRARY_PATH=.libs/spawn/relocatable; \
 	for TEST in ${SPAWN_TESTS}; do \
 	  echo $$TEST; $$TEST; \
 	done
