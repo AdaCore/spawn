@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                         Language Server Protocol                         --
 --                                                                          --
---                     Copyright (C) 2018-2020, AdaCore                     --
+--                     Copyright (C) 2018-2021, AdaCore                     --
 --                                                                          --
 -- This is free software;  you can redistribute it  and/or modify it  under --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -29,7 +29,7 @@ library project Spawn is
 
    type Build_Kind is ("dev", "prod", "coverage");
    Build_Mode : Build_Kind :=
-     external ("SPAWN_BUILD_MODE", external ("BUILD_MODE", "dev"));
+     external ("SPAWN_BUILD_MODE", external ("BUILD_MODE", "prod"));
 
    --  By default, treat warnings as errors in dev mode, but not in prod
    --  mode. Let users override this default using the SPAWN_WARN_ERRORS
