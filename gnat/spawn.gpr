@@ -27,8 +27,8 @@ library project Spawn is
    type Library_Kind is ("static", "static-pic", "relocatable");
    Library_Type : Library_Kind := external ("LIBRARY_TYPE", "static");
 
-   type Build_Kind is ("dev", "prod", "coverage");
-   Build_Mode : Build_Kind :=
+   type Spawn_Build_Kind is ("dev", "prod", "coverage");
+   Build_Mode : Spawn_Build_Kind :=
      external ("SPAWN_BUILD_MODE", external ("BUILD_MODE", "prod"));
 
    --  By default, treat warnings as errors in dev mode, but not in prod
