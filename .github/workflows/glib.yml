@@ -1,0 +1,59 @@
+on: [push, pull_request]
+name: Glib
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    name: Build
+    steps:
+      - name: Initialize OS env and git autocrlf
+        shell: bash
+        run: |
+          git config --global core.autocrlf input
+          if [[ ${{ runner.os }} = macOS ]]; then
+              echo "OS=osx" >> $GITHUB_ENV
+          fi
+      - name: Get Spawn
+        uses: actions/checkout@v2
+
+      - name: Install Glib & Gtk (Linux only)
+        if: ${{ runner.os == 'Linux' }}
+        run: |
+          sudo apt-get install -y libgtk-3-dev
+
+      - name: Set up Homebrew (Mac OS X only)
+        id: set-up-homebrew
+        if: ${{ runner.os == 'macOS' }}
+        uses: Homebrew/actions/setup-homebrew@master
+
+      - name: Install Gtk (Mac OS X only)
+        if: ${{ runner.os == 'macOS' }}
+        run: |
+          brew install --verbose gtk+3
+          mkdir /Users/runner/work/gtkada
+          ln -s $PWD /Users/runner/work/gtkada/gtkada
+
+      - name: Install GtkAda
+        run: |
+          BINTRAY=https://bintray.com/reznikmm/libadalang/download_file
+          FILE=gtkada-master-${{ runner.os }}.tar.gz
+          mkdir prefix
+          curl -L $BINTRAY?file_path=$FILE | tar xzf - -C prefix
+      - uses: actions/cache@v2
+        with:
+          path: ./cached_gnat
+          key: ${{ runner.os }}-gnat-2020.1
+          restore-keys: ${{ runner.os }}-gnat-2020.1
+      - name: Get GNAT Community 2020 toolchain
+        uses: ada-actions/toolchain@ce2020
+        with:
+          distrib: community
+          install_dir: ./cached_gnat
+      - name: Build and test
+        run: |
+          export ADA_PROJECT_PATH=$PWD/prefix/lib/gnat
+          gprbuild -p -P gnat/spawn_glib_tests.gpr
+          .obj/spawn_test/spawn_glib_test
