@@ -31,6 +31,8 @@ library project Spawn is
    Build_Mode : Spawn_Build_Kind :=
      external ("SPAWN_BUILD_MODE", external ("BUILD_MODE", "prod"));
 
+   Superproject := external ("SUPERPROJECT", "");
+
    --  By default, treat warnings as errors in dev mode, but not in prod
    --  mode. Let users override this default using the SPAWN_WARN_ERRORS
    --  environment variable.
@@ -39,8 +41,8 @@ library project Spawn is
    Warnings_As_Errors : Any_Boolean := external ("SPAWN_WARN_ERRORS", "true");
 
    for Library_Kind use Library_Type;
-   for Object_Dir   use "../.obj/spawn/" & Library_Type;
-   for Library_Dir  use "../.libs/spawn/" & Library_Type;
+   for Object_Dir   use "../.obj/" & Superproject & "/spawn/" & Library_Type;
+   for Library_Dir  use "../.libs/" & Superproject & "/spawn/" & Library_Type;
    for Library_Name use "spawn";
    for Source_Dirs use ("../source/spawn");
    for Languages use ("Ada", "c");
