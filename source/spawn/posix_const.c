@@ -25,3 +25,25 @@ extern int SPAWN_EINTR;
 extern int SPAWN_EAGAIN;
 extern unsigned short SPAWN_POLLIN;
 extern unsigned short SPAWN_POLLOUT;
+
+/* Macros */
+
+extern int __spawn_WIFEXITED(int status)
+{
+    return (int)WIFEXITED(status);
+}
+
+extern unsigned __spawn_WEXITSTATUS(int status)
+{
+    return WEXITSTATUS(status);
+}
+
+extern int __spawn_WIFSIGNALED(int status)
+{
+    return (int)WIFSIGNALED(status);
+}
+
+extern unsigned __spawn_WTERMSIG(int status)
+{
+    return WTERMSIG(status);
+}

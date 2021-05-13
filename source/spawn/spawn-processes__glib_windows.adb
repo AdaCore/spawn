@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                         Language Server Protocol                         --
 --                                                                          --
---                     Copyright (C) 2018-2019, AdaCore                     --
+--                     Copyright (C) 2018-2021, AdaCore                     --
 --                                                                          --
 -- This is free software;  you can redistribute it  and/or modify it  under --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -188,10 +188,19 @@ package body Spawn.Processes is
    -- Exit_Code --
    ---------------
 
-   function Exit_Code (Self : Process'Class) return Integer is
+   function Exit_Code (Self : Process'Class) return Process_Exit_Code is
    begin
       return Self.Exit_Code;
    end Exit_Code;
+
+   -----------------
+   -- Exit_Status --
+   -----------------
+
+   function Exit_Status (Self : Process'Class) return Process_Exit_Status is
+   begin
+      return Self.Exit_Status;
+   end Exit_Status;
 
    --------------
    -- Finalize --

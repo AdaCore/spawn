@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                         Language Server Protocol                         --
 --                                                                          --
---                     Copyright (C) 2018-2019, AdaCore                     --
+--                     Copyright (C) 2018-2021, AdaCore                     --
 --                                                                          --
 -- This is free software;  you can redistribute it  and/or modify it  under --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -681,9 +681,6 @@ package body Spawn.Processes.Windows is
 
       function Is_Error (Value : Windows_API.BOOL) return Boolean;
 
-      function To_Integer is new Ada.Unchecked_Conversion
-        (Windows_API.DWORD, Integer);
-
       --------------
       -- If_Error --
       --------------
@@ -701,6 +698,7 @@ package body Spawn.Processes.Windows is
       end Is_Error;
 
       Exit_Code : aliased Windows_API.DWORD := 0;
+
    begin
       --  Close stdio pipes
       for J in Self.pipe'Range loop
@@ -715,9 +713,18 @@ package body Spawn.Processes.Windows is
           and then not Is_Error
             (System.Win32.CloseHandle (Self.pid.hThread))
       then
-         Self.Exit_Code := To_Integer (Exit_Code);
+         Self.Exit_Status :=
+           (if Exit_Code in 16#8000_0000# .. 16#CFFF_FFFF#
+              then Crash
+              else Normal);
+         --  Win32 error codes with upper bit set corresponds to unhandled
+         --  exception in the application, but bit 29 corresponds to
+         --  application defined error codes thus they are excluded here.
+
+         Self.Exit_Code := Process_Exit_Code (Exit_Code);
          Self.Status := Not_Running;
-         Self.Listener.Finished (Self.Exit_Code);
+         Self.Listener.Finished
+           (Self.Exit_Status, Self.Exit_Code);
       end if;
    end On_Process_Died;
 
