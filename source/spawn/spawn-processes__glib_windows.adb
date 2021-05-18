@@ -400,7 +400,7 @@ package body Spawn.Processes is
 
    procedure Terminate_Process (Self : in out Process'Class) is
    begin
-      raise Program_Error;
+      Windows.Do_Terminate_Process (Self);
    end Terminate_Process;
 
    -----------------------

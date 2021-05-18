@@ -57,6 +57,12 @@ package body Spawn.Processes.Windows is
    --  return the argument string unchanged. Arguments in a command line should
    --  be separated by spaces; this subprogram doesn't add these spaces.
 
+   function Internal_Terminate_Process
+     (hWnd   : Windows_API.HWND;
+      lParam : Windows_API.LPARAM) return Windows_API.BOOL;
+   --  Post WM_CLOSE message to the window when given window belongs to given
+   --  process. lParam is process identifier in DWORD format.
+
    Callback : constant array (Stdout .. Stderr) of Read_Write_Ex.Callback :=
      (Standard_Output_Callback'Access,
       Standard_Error_Callback'Access);
@@ -143,6 +149,33 @@ package body Spawn.Processes.Windows is
          --  Closing double quotation mark
       end if;
    end Append_Escaped_String;
+
+   --------------------------------
+   -- Internal_Terminate_Process --
+   --------------------------------
+
+   function Internal_Terminate_Process
+     (hWnd   : Windows_API.HWND;
+      lParam : Windows_API.LPARAM) return Windows_API.BOOL
+   is
+      use type Windows_API.DWORD;
+
+      Process_ID         : constant Windows_API.DWORD :=
+        Windows_API.DWORD (lParam);
+      Current_Thread_ID  : Windows_API.DWORD with Unreferenced;
+      Current_Process_ID : aliased Windows_API.DWORD  := 0;
+      Dummy              : Windows_API.BOOL;
+
+   begin
+      Current_Thread_ID :=
+        Windows_API.GetWindowThreadProcessId (hWnd, Current_Process_ID'Access);
+
+      if Current_Process_ID = Process_ID then
+         Dummy := Windows_API.PostMessageW (hWnd, Windows_API.WM_CLOSE, 0, 0);
+      end if;
+
+      return System.Win32.TRUE;
+   end Internal_Terminate_Process;
 
    -------------------
    -- Do_Close_Pipe --
@@ -566,6 +599,23 @@ package body Spawn.Processes.Windows is
       Request_Read (Stdout);
       Request_Read (Stderr);
    end Do_Start_Process;
+
+   --------------------------
+   -- Do_Terminate_Process --
+   --------------------------
+
+   procedure Do_Terminate_Process (Self : in out Process'Class) is
+      Dummy : Windows_API.BOOL;
+
+   begin
+      Dummy :=
+        Windows_API.EnumWindows
+          (Internal_Terminate_Process'Access,
+           Windows_API.LPARAM (Self.pid.dwProcessId));
+      Dummy :=
+         Windows_API.PostThreadMessageW
+          (Self.pid.dwThreadId, Windows_API.WM_CLOSE, 0, 0);
+   end Do_Terminate_Process;
 
    --------------
    -- Do_Write --
