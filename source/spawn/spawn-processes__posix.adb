@@ -116,6 +116,15 @@ package body Spawn.Processes is
       end if;
    end Finalize;
 
+   ------------------
+   -- Kill_Process --
+   ------------------
+
+   procedure Kill_Process (Self : in out Process'Class) is
+   begin
+      raise Program_Error;
+   end Kill_Process;
+
    --------------
    -- Listener --
    --------------
@@ -279,6 +288,15 @@ package body Spawn.Processes is
    begin
       return Self.Status;
    end Status;
+
+   -----------------------
+   -- Terminate_Process --
+   -----------------------
+
+   procedure Terminate_Process (Self : in out Process'Class) is
+   begin
+      raise Program_Error;
+   end Terminate_Process;
 
    -----------------------
    -- Working_Directory --

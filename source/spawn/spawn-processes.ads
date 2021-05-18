@@ -128,6 +128,18 @@ package Spawn.Processes is
    --  Return the exit code of last process that finishes when exit status is
    --  Normal, or signal number (on POSIX systems) or exit code (on Windows).
 
+   procedure Terminate_Process (Self : in out Process'Class);
+   --  Ask process to exit. Process can ignore this request.
+   --
+   --  On Windows, WM_CLOSE message are post, and on POSIX, the SIGTERM signal
+   --  is sent.
+
+   procedure Kill_Process (Self : in out Process'Class);
+   --  Kill current process. Process will exit immediately.
+   --
+   --  On Windows, TerminateProcess() is called, and on POSIX, the SIGKILL
+   --  signal is sent.
+
    function Listener (Self : Process'Class) return Process_Listener_Access;
    procedure Set_Listener
      (Self     : in out Process'Class;
