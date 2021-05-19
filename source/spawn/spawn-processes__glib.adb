@@ -19,9 +19,11 @@
 -- version 3.1, as published by the Free Software Foundation.               --
 ------------------------------------------------------------------------------
 
+with Ada.Interrupts.Names;
 with Interfaces.C;
 
 with Spawn.Environments.Internal;
+with Spawn.Posix;
 
 with Glib.Error;
 with Glib.IOChannel;
@@ -360,8 +362,13 @@ package body Spawn.Processes is
    ------------------
 
    procedure Kill_Process (Self : in out Process'Class) is
+      use type Interfaces.C.int;
+
+      Code : constant Interfaces.C.int := Spawn.Posix.kill
+        (Interfaces.C.int (Self.pid),
+         Interfaces.C.int (Ada.Interrupts.Names.SIGKILL));
    begin
-      raise Program_Error;
+      pragma Assert (Code = 0);
    end Kill_Process;
 
    --------------
@@ -602,8 +609,13 @@ package body Spawn.Processes is
    -----------------------
 
    procedure Terminate_Process (Self : in out Process'Class) is
+      use type Interfaces.C.int;
+
+      Code : constant Interfaces.C.int := Spawn.Posix.kill
+        (Interfaces.C.int (Self.pid),
+         Interfaces.C.int (Ada.Interrupts.Names.SIGTERM));
    begin
-      raise Program_Error;
+      pragma Assert (Code = 0);
    end Terminate_Process;
 
    -----------------------

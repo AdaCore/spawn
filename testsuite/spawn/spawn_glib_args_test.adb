@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                         Language Server Protocol                         --
 --                                                                          --
---                        Copyright (C) 2020, AdaCore                       --
+--                     Copyright (C) 2020-2021, AdaCore                     --
 --                                                                          --
 -- This is free software;  you can redistribute it  and/or modify it  under --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -44,8 +44,9 @@ procedure Spawn_Glib_Args_Test is
         (Self : in out Listener);
 
       overriding procedure Finished
-        (Self      : in out Listener;
-         Exit_Code : Integer);
+        (Self        : in out Listener;
+         Exit_Status : Spawn.Processes.Process_Exit_Status;
+         Exit_Code   : Spawn.Processes.Process_Exit_Code);
 
       overriding procedure Error_Occurred
         (Self          : in out Listener;
@@ -75,8 +76,9 @@ procedure Spawn_Glib_Args_Test is
       --------------
 
       overriding procedure Finished
-        (Self      : in out Listener;
-         Exit_Code : Integer) is
+        (Self        : in out Listener;
+         Exit_Status : Spawn.Processes.Process_Exit_Status;
+         Exit_Code   : Spawn.Processes.Process_Exit_Code) is
       begin
          Ada.Text_IO.Put_Line ("Finished" & (Exit_Code'Img));
          Self.App.Release;
@@ -107,8 +109,6 @@ procedure Spawn_Glib_Args_Test is
       overriding procedure Standard_Output_Available
         (Self : in out Listener)
       is
-         use type Ada.Streams.Stream_Element_Offset;
-
          Data : Ada.Streams.Stream_Element_Array (1 .. 256);
          Last : Ada.Streams.Stream_Element_Count;
 

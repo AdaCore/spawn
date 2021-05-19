@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                         Language Server Protocol                         --
 --                                                                          --
---                        Copyright (C) 2018, AdaCore                       --
+--                     Copyright (C) 2018-2021, AdaCore                     --
 --                                                                          --
 -- This is free software;  you can redistribute it  and/or modify it  under --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -23,9 +23,19 @@ with "spawn";
 
 project Spawn_Tests is
 
+   Main := ("spawn_test.adb", "spawn_unexpected.adb");
+
+   case Spawn.OS_API is
+      when "unix" | "osx" =>
+         Main := Main & ("spawn_kill.adb");
+
+      when "Windows_NT" =>
+         null;
+   end case;
+
    for Source_Dirs use ("../testsuite/spawn");
    for Object_Dir use "../.obj/spawn_test";
-   for Main use ("spawn_test.adb", "spawn_unexpected.adb");
+   for Main use Main;
 
    package Compiler renames Spawn.Compiler;
 
@@ -34,4 +44,3 @@ project Spawn_Tests is
    end Binder;
 
 end Spawn_Tests;
-

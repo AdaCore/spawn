@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                         Language Server Protocol                         --
 --                                                                          --
---                     Copyright (C) 2018-2019, AdaCore                     --
+--                     Copyright (C) 2018-2021, AdaCore                     --
 --                                                                          --
 -- This is free software;  you can redistribute it  and/or modify it  under --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -61,6 +61,11 @@ package Spawn.Posix is
    --
    function fork  return Interfaces.C.int
      with Import, Convention => C, External_Name => "fork";
+
+   function kill
+     (pid : Interfaces.C.int;
+      sig : Interfaces.C.int) return Interfaces.C.int
+        with Import, Convention => C, External_Name => "kill";
 
    function dup2
      (oldfd : Interfaces.C.int;
