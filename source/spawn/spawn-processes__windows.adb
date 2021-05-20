@@ -293,7 +293,7 @@ package body Spawn.Processes is
       end On_No_Data;
 
    begin
-      if Self.Status /= Running then
+      if Self.Status /= Running or Data'Length = 0 then
          Last := Data'First - 1;
          return;
       end if;
