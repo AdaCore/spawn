@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                         Language Server Protocol                         --
 --                                                                          --
---                     Copyright (C) 2018-2020, AdaCore                     --
+--                     Copyright (C) 2018-2021, AdaCore                     --
 --                                                                          --
 -- This is free software;  you can redistribute it  and/or modify it  under --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -19,9 +19,11 @@
 -- version 3.1, as published by the Free Software Foundation.               --
 ------------------------------------------------------------------------------
 
+with Ada.Interrupts.Names;
 with Interfaces.C;
 
 with Spawn.Environments.Internal;
+with Spawn.Posix;
 
 with Glib.Error;
 with Glib.IOChannel;
@@ -331,10 +333,19 @@ package body Spawn.Processes is
    -- Exit_Code --
    ---------------
 
-   function Exit_Code (Self : Process'Class) return Integer is
+   function Exit_Code (Self : Process'Class) return Process_Exit_Code is
    begin
       return Self.Exit_Code;
    end Exit_Code;
+
+   -----------------
+   -- Exit_Status --
+   -----------------
+
+   function Exit_Status (Self : Process'Class) return Process_Exit_Status is
+   begin
+      return Self.Exit_Status;
+   end Exit_Status;
 
    --------------
    -- Finalize --
@@ -345,6 +356,20 @@ package body Spawn.Processes is
       --  Shall we check if the process is still running here?
       null;
    end Finalize;
+
+   ------------------
+   -- Kill_Process --
+   ------------------
+
+   procedure Kill_Process (Self : in out Process'Class) is
+      use type Interfaces.C.int;
+
+      Code : constant Interfaces.C.int := Spawn.Posix.kill
+        (Interfaces.C.int (Self.pid),
+         Interfaces.C.int (Ada.Interrupts.Names.SIGKILL));
+   begin
+      pragma Assert (Code = 0);
+   end Kill_Process;
 
    --------------
    -- Listener --
@@ -364,6 +389,13 @@ package body Spawn.Processes is
       status : Glib.Gint;
       data   : access Internal.Process_Reference)
    is
+      use type Glib.GQuark;
+
+      function G_SPAWN_EXIT_ERROR return Glib.GQuark
+        with Import        => True,
+             Convention    => C,
+             External_Name => "g_spawn_exit_error_quark";
+
       Process : constant Process_Access := Process_Access (data.Self);
       Error   : aliased Glib.Error.GError;
    begin
@@ -376,13 +408,20 @@ package body Spawn.Processes is
       if Glib.Spawn.Spawn_Check_Exit_Status
         (status, Error'Access)
       then
-         Process.Exit_Code := 0;
+         Process.Exit_Status := Normal;
+         Process.Exit_Code   := 0;
+
       else
-         Process.Exit_Code := Integer (Glib.Error.Get_Code (Error));
+         Process.Exit_Status :=
+           (if Glib.Error.Get_Domain (Error) = G_SPAWN_EXIT_ERROR
+              then Normal
+              else Crash);
+         Process.Exit_Code := Process_Exit_Code (Glib.Error.Get_Code (Error));
       end if;
 
       Process.Status := Not_Running;
-      Process.Listener.Finished (Process.Exit_Code);
+      Process.Listener.Finished (Process.Exit_Status, Process.Exit_Code);
+
    exception
       when E : others =>
          Process.Listener.Exception_Occurred (E);
@@ -564,6 +603,20 @@ package body Spawn.Processes is
    begin
       return Self.Status;
    end Status;
+
+   -----------------------
+   -- Terminate_Process --
+   -----------------------
+
+   procedure Terminate_Process (Self : in out Process'Class) is
+      use type Interfaces.C.int;
+
+      Code : constant Interfaces.C.int := Spawn.Posix.kill
+        (Interfaces.C.int (Self.pid),
+         Interfaces.C.int (Ada.Interrupts.Names.SIGTERM));
+   begin
+      pragma Assert (Code = 0);
+   end Terminate_Process;
 
    -----------------------
    -- Working_Directory --

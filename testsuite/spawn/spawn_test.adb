@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                         Language Server Protocol                         --
 --                                                                          --
---                        Copyright (C) 2018, AdaCore                       --
+--                     Copyright (C) 2018-2021, AdaCore                     --
 --                                                                          --
 -- This is free software;  you can redistribute it  and/or modify it  under --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -66,8 +66,9 @@ procedure Spawn_Test is
       overriding procedure Started (Self : in out Listener);
 
       overriding procedure Finished
-        (Self      : in out Listener;
-         Exit_Code : Integer);
+        (Self        : in out Listener;
+         Exit_Status : Spawn.Processes.Process_Exit_Status;
+         Exit_Code   : Spawn.Processes.Process_Exit_Code);
 
       overriding procedure Error_Occurred
         (Self          : in out Listener;
@@ -153,8 +154,12 @@ procedure Spawn_Test is
       end Started;
 
       overriding procedure Finished
-        (Self      : in out Listener;
-         Exit_Code : Integer) is
+        (Self        : in out Listener;
+         Exit_Status : Spawn.Processes.Process_Exit_Status;
+         Exit_Code   : Spawn.Processes.Process_Exit_Code)
+      is
+         use type Spawn.Processes.Process_Exit_Code;
+
       begin
          if Exit_Code /= 0 then
             Ada.Text_IO.Put_Line ("Unexpected exit code" & (Exit_Code'Img));
@@ -168,11 +173,11 @@ procedure Spawn_Test is
         (Self          : in out Listener;
          Process_Error : Integer)
       is
-         pragma Unreferenced (Self);
       begin
          Ada.Text_IO.Put_Line ("Error_Occurred:" & (Process_Error'Img));
          Ada.Command_Line.Set_Exit_Status (Ada.Command_Line.Failure);
 
+         Self.Error := Process_Error;
          Self.Stopped := True;
       end Error_Occurred;
 

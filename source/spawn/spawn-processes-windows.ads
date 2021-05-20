@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                         Language Server Protocol                         --
 --                                                                          --
---                     Copyright (C) 2018-2019, AdaCore                     --
+--                     Copyright (C) 2018-2021, AdaCore                     --
 --                                                                          --
 -- This is free software;  you can redistribute it  and/or modify it  under --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -27,6 +27,10 @@ package Spawn.Processes.Windows is
    procedure Do_Start_Process
      (Self     : aliased in out Process'Class;
       On_Start : access procedure);
+
+   procedure Do_Terminate_Process (Self : in out Process'Class);
+
+   procedure Do_Kill_Process (Self : in out Process'Class);
 
    procedure Do_Close_Pipe
      (Self : in out Process'Class;

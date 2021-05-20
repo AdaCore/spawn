@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                         Language Server Protocol                         --
 --                                                                          --
---                     Copyright (C) 2018-2019, AdaCore                     --
+--                     Copyright (C) 2018-2021, AdaCore                     --
 --                                                                          --
 -- This is free software;  you can redistribute it  and/or modify it  under --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -24,6 +24,7 @@
 with Ada.Exceptions;
 with Ada.Streams;
 with Ada.Strings.Unbounded;
+with Interfaces;
 
 with Spawn.Environments;
 with Spawn.String_Vectors;
@@ -31,6 +32,10 @@ with Spawn.String_Vectors;
 private with Spawn.Internal;
 
 package Spawn.Processes is
+
+   type Process_Exit_Status is (Normal, Crash);
+
+   type Process_Exit_Code is new Interfaces.Unsigned_32;
 
    type Process_Listener is limited interface;
    type Process_Listener_Access is access all Process_Listener'Class;
@@ -50,8 +55,14 @@ package Spawn.Processes is
    procedure Started (Self : in out Process_Listener) is null;
 
    procedure Finished
-    (Self      : in out Process_Listener;
-     Exit_Code : Integer) is null;
+    (Self        : in out Process_Listener;
+     Exit_Status : Process_Exit_Status;
+     Exit_Code   : Process_Exit_Code) is null;
+   --  Called when the process finishes. Exit_Status is exit status of the
+   --  process. On normal exit, Exit_Code is the exit code of the process,
+   --  on crash its meaning depends from operating system. For POSIX systems
+   --  it is number of signal when available, on Windows it is process exit
+   --  code.
 
    procedure Error_Occurred
     (Self          : in out Process_Listener;
@@ -108,8 +119,26 @@ package Spawn.Processes is
 
    function Status (Self : Process'Class) return Process_Status;
 
-   function Exit_Code (Self : Process'Class) return Integer
+   function Exit_Status (Self : Process'Class) return Process_Exit_Status
      with Pre => Self.Status = Not_Running;
+   --  Return the exit status of last process that finishes.
+
+   function Exit_Code (Self : Process'Class) return Process_Exit_Code
+     with Pre => Self.Status = Not_Running;
+   --  Return the exit code of last process that finishes when exit status is
+   --  Normal, or signal number (on POSIX systems) or exit code (on Windows).
+
+   procedure Terminate_Process (Self : in out Process'Class);
+   --  Ask process to exit. Process can ignore this request.
+   --
+   --  On Windows, WM_CLOSE message are post, and on POSIX, the SIGTERM signal
+   --  is sent.
+
+   procedure Kill_Process (Self : in out Process'Class);
+   --  Kill current process. Process will exit immediately.
+   --
+   --  On Windows, TerminateProcess() is called, and on POSIX, the SIGKILL
+   --  signal is sent.
 
    function Listener (Self : Process'Class) return Process_Listener_Access;
    procedure Set_Listener
@@ -159,7 +188,8 @@ private
       Arguments   : Spawn.String_Vectors.UTF_8_String_Vector;
       Environment : Spawn.Environments.Process_Environment :=
         Spawn.Environments.System_Environment;
-      Exit_Code   : Integer := -1;
+      Exit_Status : Process_Exit_Status := Normal;
+      Exit_Code   : Process_Exit_Code := Process_Exit_Code'Last;
       Status      : Process_Status := Not_Running;
       Listener    : Process_Listener_Access;
       Program     : Ada.Strings.Unbounded.Unbounded_String;

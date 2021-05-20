@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                         Language Server Protocol                         --
 --                                                                          --
---                     Copyright (C) 2018-2019, AdaCore                     --
+--                     Copyright (C) 2018-2021, AdaCore                     --
 --                                                                          --
 -- This is free software;  you can redistribute it  and/or modify it  under --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -37,6 +37,12 @@ package Spawn.Windows_API is
    subtype LPSTR is Interfaces.C.Strings.chars_ptr;
    subtype LPBYTE is LPSTR;
    type LPWSTR is access all WCHAR;
+   type UINT is new Interfaces.C.unsigned;
+   type LONG_PTR is mod 2 ** Standard'Address_Size;
+   type UINT_PTR is mod 2 ** Standard'Address_Size;
+   subtype LPARAM is LONG_PTR;
+   subtype WPARAM is UINT_PTR;
+   type HWND is new System.Win32.PVOID;
 
    type STARTUPINFOW is record
       cb              : DWORD := 0;
@@ -98,6 +104,11 @@ package Spawn.Windows_API is
       lpProcessInformation : access PROCESS_INFORMATION)
       return BOOL
         with Import, Convention => Stdcall, External_Name => "CreateProcessW";
+
+   function TerminateProcess
+     (hProcess  : HANDLE;
+      uExitCode : UINT) return BOOL
+      with Import, Convention => Stdcall, External_Name => "TerminateProcess";
 
    type OVERLAPPED is record
       Internal     : System.Address := System.Null_Address;
@@ -264,5 +275,37 @@ package Spawn.Windows_API is
    function GetCurrentProcessId return DWORD
      with Import, Convention => Stdcall,
           External_Name => "GetCurrentProcessId";
+
+   type WNDENUMPROC is access function
+     (HWnd  : Windows_API.HWND;
+      Param : LPARAM) return BOOL;
+
+   function EnumWindows
+     (lpEnumFunc : WNDENUMPROC;
+      lParam     : Windows_API.LPARAM) return BOOL
+     with Import, Convention => Stdcall, External_Name => "EnumWindows";
+
+   function GetWindowThreadProcessId
+     (hWnd          : Windows_API.HWND;
+      lpdwProcessId : access DWORD) return DWORD
+     with Import,
+          Convention    => Stdcall,
+          External_Name => "GetWindowThreadProcessId";
+
+   WM_CLOSE : constant := 16#0010#;
+
+   function PostMessageW
+     (hWnd   : Windows_API.HWND;
+      Msg    : UINT;
+      wParam : Windows_API.WPARAM;
+      lParam : Windows_API.LPARAM) return BOOL
+     with Import, Convention => Stdcall, External_Name => "PostMessageW";
+
+   function PostThreadMessageW
+     (idThread : DWORD;
+      Msg      : UINT;
+      wParam   : Windows_API.WPARAM;
+      lParam   : Windows_API.LPARAM) return BOOL
+     with Import, Convention => Stdcall, External_Name => "PostThreadMessageW";
 
 end Spawn.Windows_API;

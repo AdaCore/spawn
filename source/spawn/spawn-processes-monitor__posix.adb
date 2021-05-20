@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                         Language Server Protocol                         --
 --                                                                          --
---                     Copyright (C) 2018-2020, AdaCore                     --
+--                     Copyright (C) 2018-2021, AdaCore                     --
 --                                                                          --
 -- This is free software;  you can redistribute it  and/or modify it  under --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -356,7 +356,50 @@ package body Spawn.Processes.Monitor is
    --------------------
 
    procedure Check_Children is
-      use type Interfaces.C.unsigned;
+
+      function WIFEXITED (Status : Interfaces.C.unsigned) return Boolean;
+
+      function WEXITSTATUS
+        (Status : Interfaces.C.unsigned) return Interfaces.C.unsigned
+           with Import        => True,
+                Convention    => C,
+                External_Name => "__spawn_WEXITSTATUS";
+
+      function WIFSIGNALED (Status : Interfaces.C.unsigned) return Boolean;
+
+      function WTERMSIG
+        (Status : Interfaces.C.unsigned) return Interfaces.C.unsigned
+           with Import, Convention => C, External_Name => "__spawn_WTERMSIG";
+
+      ---------------
+      -- WIFEXITED --
+      ---------------
+
+      function WIFEXITED (Status : Interfaces.C.unsigned) return Boolean is
+         function Imported
+           (Status : Interfaces.C.unsigned) return Interfaces.C.int
+              with Import        => True,
+                   Convention    => C,
+                   External_Name => "__spawn_WIFEXITED";
+
+      begin
+         return Imported (Status) /= 0;
+      end WIFEXITED;
+
+      -----------------
+      -- WIFSIGNALED --
+      -----------------
+
+      function WIFSIGNALED (Status : Interfaces.C.unsigned) return Boolean is
+         function Imported
+           (Status : Interfaces.C.unsigned) return Interfaces.C.int
+              with Import        => True,
+                   Convention    => C,
+                   External_Name => "__spawn_WIFSIGNALED";
+
+      begin
+         return Imported (Status) /= 0;
+      end WIFSIGNALED;
 
       status : aliased Interfaces.C.unsigned := 0;
       pid    : constant Interfaces.C.int :=
@@ -364,12 +407,26 @@ package body Spawn.Processes.Monitor is
 
       Cursor  : constant Process_Maps.Cursor := Map.Find (pid);
       Process : Process_Access;
+
    begin
       if Process_Maps.Has_Element (Cursor) then
          Process := Process_Maps.Element (Cursor);
-         Process.Exit_Code := Integer (status / 256 and 16#FF#);
+
+         Process.Exit_Status := (if WIFEXITED (status) then Normal else Crash);
+
+         case Process.Exit_Status is
+            when Normal =>
+               Process.Exit_Code := Process_Exit_Code (WEXITSTATUS (status));
+
+            when Crash =>
+               Process.Exit_Code :=
+                 (if WIFSIGNALED (status)
+                  then Process_Exit_Code (WTERMSIG (status))
+                  else Process_Exit_Code'Last);
+         end case;
+
          Process.Status := Not_Running;
-         Process.Listener.Finished (Process.Exit_Code);
+         Process.Listener.Finished (Process.Exit_Status, Process.Exit_Code);
       end if;
    end Check_Children;
 
@@ -448,12 +505,13 @@ package body Spawn.Processes.Monitor is
       Kind    : Pipe_Kinds) is
    begin
       if Kind = Launch then
-         if Process.Exit_Code = -1 then
+         if Process.Exit_Code = Process_Exit_Code'Last then
             Process.Status := Running;
             Process.Listener.Started;
             Process.Listener.Standard_Input_Available;
+
          else
-            Process.Listener.Error_Occurred (Process.Exit_Code);
+            Process.Listener.Error_Occurred (Integer (Process.Exit_Code));
          end if;
       end if;
    end My_End_Callback;
@@ -491,7 +549,7 @@ package body Spawn.Processes.Monitor is
                   Error_Dump'Length);
 
                if Count = Error_Dump'Length then
-                  Process.Exit_Code := errno;
+                  Process.Exit_Code := Process_Exit_Code (errno);
                end if;
             end;
       end case;
