@@ -109,7 +109,7 @@ package body Spawn.Processes is
 
    procedure Kill_Process (Self : in out Process'Class) is
    begin
-      raise Program_Error;
+      Windows.Do_Kill_Process (Self);
    end Kill_Process;
 
    --------------

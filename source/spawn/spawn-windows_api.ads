@@ -105,6 +105,11 @@ package Spawn.Windows_API is
       return BOOL
         with Import, Convention => Stdcall, External_Name => "CreateProcessW";
 
+   function TerminateProcess
+     (hProcess  : HANDLE;
+      uExitCode : UINT) return BOOL
+      with Import, Convention => Stdcall, External_Name => "TerminateProcess";
+
    type OVERLAPPED is record
       Internal     : System.Address := System.Null_Address;
       InternalHigh : System.Address := System.Null_Address;

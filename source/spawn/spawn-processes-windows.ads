@@ -30,6 +30,8 @@ package Spawn.Processes.Windows is
 
    procedure Do_Terminate_Process (Self : in out Process'Class);
 
+   procedure Do_Kill_Process (Self : in out Process'Class);
+
    procedure Do_Close_Pipe
      (Self : in out Process'Class;
       Kind : Pipe_Kinds);

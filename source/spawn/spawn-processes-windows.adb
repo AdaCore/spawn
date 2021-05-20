@@ -35,6 +35,9 @@ with Spawn.Environments.Internal;
 
 package body Spawn.Processes.Windows is
 
+   Terminate_Code : constant Windows_API.UINT := 16#F291#;
+   --  Arbitrary code to use as exit code for TerminateProcess call.
+
    package Read_Write_Ex is
      new Windows_API.Generic_Read_Write_Ex (Internal.Context);
 
@@ -210,6 +213,18 @@ package body Spawn.Processes.Windows is
          Self.pipe (Kind).Handle := System.Win32.INVALID_HANDLE_VALUE;
       end if;
    end Do_Close_Pipe;
+
+   ---------------------
+   -- Do_Kill_Process --
+   ---------------------
+
+   procedure Do_Kill_Process (Self : in out Process'Class) is
+      Success : Windows_API.BOOL with Unreferenced;
+
+   begin
+      Success :=
+        Windows_API.TerminateProcess (Self.pid.hProcess, Terminate_Code);
+   end Do_Kill_Process;
 
    -------------
    -- Do_Read --
@@ -605,14 +620,14 @@ package body Spawn.Processes.Windows is
    --------------------------
 
    procedure Do_Terminate_Process (Self : in out Process'Class) is
-      Dummy : Windows_API.BOOL;
+      Success : Windows_API.BOOL with Unreferenced;
 
    begin
-      Dummy :=
+      Success :=
         Windows_API.EnumWindows
           (Internal_Terminate_Process'Access,
            Windows_API.LPARAM (Self.pid.dwProcessId));
-      Dummy :=
+      Success :=
          Windows_API.PostThreadMessageW
           (Self.pid.dwThreadId, Windows_API.WM_CLOSE, 0, 0);
    end Do_Terminate_Process;
@@ -729,6 +744,8 @@ package body Spawn.Processes.Windows is
 
    procedure On_Process_Died (Self : in out Process'Class) is
 
+      use type Windows_API.DWORD;
+
       function Is_Error (Value : Windows_API.BOOL) return Boolean;
 
       --------------
@@ -763,13 +780,49 @@ package body Spawn.Processes.Windows is
           and then not Is_Error
             (System.Win32.CloseHandle (Self.pid.hThread))
       then
-         Self.Exit_Status :=
-           (if Exit_Code in 16#8000_0000# .. 16#CFFF_FFFF#
-              then Crash
-              else Normal);
-         --  Win32 error codes with upper bit set corresponds to unhandled
-         --  exception in the application, but bit 29 corresponds to
-         --  application defined error codes thus they are excluded here.
+         --  Process exit code can be aplication defined code, Win32 error
+         --  code, HRESULT code (including Win32 code or NTSTATUS code
+         --  converted into HRESULT), or NTSTATUS code. It is imposible to
+         --  recognize used format exactly, thus some heuristic is used to
+         --  detect "crash" cases, primary cases when system's HRESULT and
+         --  NTSTATUS code reports failure. All custom error codes are
+         --  interpreted as normal exit.
+         --
+         --  Win32 error code occupy two lower bytes and all higher bits are
+         --  set to 0.
+         --
+         --  NTSTATUS upper bits are:
+         --   | 31 | 30 | 29 | 28 |
+         --   |   Sev   |  C |  N |
+         --
+         --  HRESULT upper bits are:
+         --   | 31 | 30 | 29 | 28 |
+         --   |  S |  R |  C |  N |
+         --
+         --  For both NTSTATUS and HRESULT 'C' is reserved for custom codes.
+         --  All these codes interpreted as normal termination.
+         --
+         --  'N' is '0' for native NTSTATUS, but '1' when NTSTATUS is convenred
+         --  into HRESULT.
+         --
+         --  'Sev" is severity of the NTSTATUS. Only 2#11# is interpreted as
+         --  crash.
+         --
+         --  'S" is severity of HRESULT, 2#1# means failure.
+
+         if Exit_Code = Windows_API.DWORD (Terminate_Code)
+           --  Process terminated by call to TerminateProcess
+           or else (Exit_Code and 16#F000_0000#) = 16#D000_0000#
+           --  NTSTATUS converted into HRESULT with STATUS_SERVERITY_ERROR
+           --  (bits 28, 30 and 31 are set to '1', and bit 29 are set to '0')
+           or else (Exit_Code and 16#B000_0000#) = 16#8000_0000#
+           --  HRESULT with failure severity
+         then
+            Self.Exit_Status := Crash;
+
+         else
+            Self.Exit_Status := Normal;
+         end if;
 
          Self.Exit_Code := Process_Exit_Code (Exit_Code);
          Self.Status := Not_Running;
