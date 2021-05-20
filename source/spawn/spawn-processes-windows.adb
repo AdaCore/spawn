@@ -268,6 +268,11 @@ package body Spawn.Processes.Windows is
      (Self     : aliased in out Process'Class;
       On_Start : access procedure)
    is
+      use type Windows_API.BOOL;
+      use type Windows_API.DWORD;
+      use type Windows_API.HANDLE;
+      use type Windows_API.HWND;
+
       function Make_Command_Line return Interfaces.C.wchar_array;
       function Work_Directory return String;
       function Is_Error (Value : Windows_API.BOOL) return Boolean;
@@ -281,10 +286,6 @@ package body Spawn.Processes.Windows is
 
       function Create_Pipes
         (Start : access Windows_API.STARTUPINFOW) return Boolean;
-
-      use type Windows_API.BOOL;
-      use type Windows_API.DWORD;
-      use type Windows_API.HANDLE;
 
       -----------------
       -- Create_Pipe --
@@ -584,6 +585,7 @@ package body Spawn.Processes.Windows is
         Interfaces.C.To_C
           (Ada.Strings.UTF_Encoding.Wide_Strings.Decode
              (Work_Directory));
+
    begin
       if not Create_Pipes (Start'Access) then
          return;
@@ -596,8 +598,12 @@ package body Spawn.Processes.Windows is
             lpProcessAttributes  => null,
             lpThreadAttributes   => null,
             bInheritHandles      => System.Win32.TRUE,
-            dwCreationFlags      => Windows_API.CREATE_NO_WINDOW +
-              Windows_API.CREATE_UNICODE_ENVIRONMENT,
+            dwCreationFlags      =>
+              (if Windows_API.GetConsoleWindow
+                    /= Windows_API.HWND (System.Null_Address)
+                 then 0
+                 else Windows_API.CREATE_NO_WINDOW)
+                + Windows_API.CREATE_UNICODE_ENVIRONMENT,
             lpEnvironment        => Env,
             lpCurrentDirectory   => Dir,
             lpStartupInfo        => Start'Access,

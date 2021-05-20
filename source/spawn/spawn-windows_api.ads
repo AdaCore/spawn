@@ -301,6 +301,9 @@ package Spawn.Windows_API is
       lParam : Windows_API.LPARAM) return BOOL
      with Import, Convention => Stdcall, External_Name => "PostMessageW";
 
+   function GetConsoleWindow return HWND
+     with Import, Convention => Stdcall, External_Name => "GetConsoleWindow";
+
    function PostThreadMessageW
      (idThread : DWORD;
       Msg      : UINT;
