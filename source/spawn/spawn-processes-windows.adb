@@ -167,14 +167,15 @@ package body Spawn.Processes.Windows is
         Windows_API.DWORD (lParam);
       Current_Thread_ID  : Windows_API.DWORD with Unreferenced;
       Current_Process_ID : aliased Windows_API.DWORD  := 0;
-      Dummy              : Windows_API.BOOL;
+      Success            : Windows_API.BOOL with Unreferenced;
 
    begin
       Current_Thread_ID :=
         Windows_API.GetWindowThreadProcessId (hWnd, Current_Process_ID'Access);
 
       if Current_Process_ID = Process_ID then
-         Dummy := Windows_API.PostMessageW (hWnd, Windows_API.WM_CLOSE, 0, 0);
+         Success :=
+           Windows_API.PostMessageW (hWnd, Windows_API.WM_CLOSE, 0, 0);
       end if;
 
       return System.Win32.TRUE;
@@ -603,7 +604,8 @@ package body Spawn.Processes.Windows is
                     /= Windows_API.HWND (System.Null_Address)
                  then 0
                  else Windows_API.CREATE_NO_WINDOW)
-                + Windows_API.CREATE_UNICODE_ENVIRONMENT,
+              + Windows_API.CREATE_UNICODE_ENVIRONMENT
+              + Windows_API.CREATE_NEW_PROCESS_GROUP,
             lpEnvironment        => Env,
             lpCurrentDirectory   => Dir,
             lpStartupInfo        => Start'Access,
@@ -629,6 +631,10 @@ package body Spawn.Processes.Windows is
       Success : Windows_API.BOOL with Unreferenced;
 
    begin
+      --  Post WM_CLOSE message to all top level windows of the process, and
+      --  to the process itself to close applications that use "windows"
+      --  subsystem.
+
       Success :=
         Windows_API.EnumWindows
           (Internal_Terminate_Process'Access,
@@ -636,6 +642,13 @@ package body Spawn.Processes.Windows is
       Success :=
          Windows_API.PostThreadMessageW
           (Self.pid.dwThreadId, Windows_API.WM_CLOSE, 0, 0);
+
+      --  Generate CRTL_BREAK_EVENT for process group to close applications
+      --  that use "console" subsystem.
+
+      Success :=
+        Windows_API.GenerateConsoleCtrlEvent
+          (Windows_API.CTRL_BREAK_EVENT, Self.pid.dwProcessId);
    end Do_Terminate_Process;
 
    --------------

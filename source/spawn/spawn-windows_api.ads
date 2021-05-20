@@ -82,14 +82,24 @@ package Spawn.Windows_API is
    end record
      with Convention => C;
 
-   CREATE_NO_WINDOW : constant DWORD := 16#08000000#;
-   --  The process is a console application that is being run without a console
-   --  window. Therefore, the console handle for the application is not set.
-
-   CREATE_UNICODE_ENVIRONMENT : constant DWORD := 16#00000400#;
+   CREATE_NEW_PROCESS_GROUP   : constant DWORD := 16#0000_0200#;
+   --  The new process is the root process of a new process group. The process
+   --  group includes all processes that are descendants of this root process.
+   --  The process identifier of the new process group is the same as the
+   --  process identifier, which is returned in the lpProcessInformation
+   --  parameter. Process groups are used by the GenerateConsoleCtrlEvent
+   --  function to enable sending a CTRL+BREAK signal to a group of console
+   --  processes.
+   --  If this flag is specified, CTRL+C signals will be disabled for all
+   --  processes within the new process group.
+   CREATE_UNICODE_ENVIRONMENT : constant DWORD := 16#0000_0400#;
    --  If this flag is set, the environment block pointed to by lpEnvironment
    --  uses Unicode characters. Otherwise, the environment block uses ANSI
    --  characters.
+   CREATE_NO_WINDOW           : constant DWORD := 16#0800_0000#;
+   --  The process is a console application that is being run without a console
+   --  window. Therefore, the console handle for the application is not set.
+
 
    function CreateProcessW
      (lpApplicationName    : Interfaces.C.wchar_array;
@@ -222,6 +232,7 @@ package Spawn.Windows_API is
    MAXIMUM_WAIT_OBJECTS : constant := 64;
    WAIT_IO_COMPLETION   : constant DWORD := 16#C0#;
    WAIT_TIMEOUT         : constant DWORD := 16#102#;
+   WAIT_FAILED          : constant DWORD := 16#FFFF_FFFF#;
 
    function GetExitCodeProcess
      (hProcess    : HANDLE;
@@ -310,5 +321,15 @@ package Spawn.Windows_API is
       wParam   : Windows_API.WPARAM;
       lParam   : Windows_API.LPARAM) return BOOL
      with Import, Convention => Stdcall, External_Name => "PostThreadMessageW";
+
+   function GenerateConsoleCtrlEvent
+     (dwCtrlEvent      : DWORD;
+      dwProcessGroupId : DWORD) return BOOL
+     with Import,
+          Convention    => Stdcall,
+          External_Name => "GenerateConsoleCtrlEvent";
+
+   CTRL_C_EVENT     : constant DWORD := 0;
+   CTRL_BREAK_EVENT : constant DWORD := 1;
 
 end Spawn.Windows_API;
