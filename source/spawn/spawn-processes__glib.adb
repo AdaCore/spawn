@@ -173,6 +173,9 @@ package body Spawn.Processes is
       In_Callback : constant Boolean :=
         Pipe.Event /= Glib.Main.No_Source_Id;
    begin
+      --  Protect against uninitalized value
+      Last := Data'First - 1;
+
       case Status is
          when Glib.IOChannel.G_Io_Status_Eof =>
             --  Reading is completed, so no watching is required
