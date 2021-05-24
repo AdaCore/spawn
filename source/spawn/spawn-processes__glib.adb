@@ -19,8 +19,11 @@
 -- version 3.1, as published by the Free Software Foundation.               --
 ------------------------------------------------------------------------------
 
-with Ada.Interrupts.Names;
 with Interfaces.C;
+
+pragma Warnings (Off, "internal GNAT unit");
+with System.OS_Interface;
+pragma Warnings (On);
 
 with Spawn.Environments.Internal;
 with Spawn.Posix;
@@ -369,7 +372,7 @@ package body Spawn.Processes is
 
       Code : constant Interfaces.C.int := Spawn.Posix.kill
         (Interfaces.C.int (Self.pid),
-         Interfaces.C.int (Ada.Interrupts.Names.SIGKILL));
+         Interfaces.C.int (System.OS_Interface.SIGKILL));
    begin
       pragma Assert (Code = 0);
    end Kill_Process;
@@ -616,7 +619,7 @@ package body Spawn.Processes is
 
       Code : constant Interfaces.C.int := Spawn.Posix.kill
         (Interfaces.C.int (Self.pid),
-         Interfaces.C.int (Ada.Interrupts.Names.SIGTERM));
+         Interfaces.C.int (System.OS_Interface.SIGTERM));
    begin
       pragma Assert (Code = 0);
    end Terminate_Process;
