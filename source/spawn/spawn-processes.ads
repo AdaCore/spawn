@@ -53,6 +53,7 @@ package Spawn.Processes is
    --  Called once when it's possible to write data again.
 
    procedure Started (Self : in out Process_Listener) is null;
+   --  Called when the process is started
 
    procedure Finished
     (Self        : in out Process_Listener;
@@ -80,6 +81,8 @@ package Spawn.Processes is
     (Not_Running,
      Starting,
      Running);
+   --  ??? What is the difference between Starting and Running? When are these
+   --  set?
 
    type Process is tagged limited private;
 
@@ -112,7 +115,8 @@ package Spawn.Processes is
      (Self    : in out Process'Class;
       Program : UTF_8_String)
         with Pre => Self.Status = Not_Running;
-   --  Executables name
+   --  Executables name. Note that this should be a resolved path,
+   --  this API does not look for executables on the PATH.
 
    procedure Start (Self : in out Process'Class)
      with Pre => Self.Status = Not_Running;
@@ -167,8 +171,9 @@ package Spawn.Processes is
      (Self : in out Process'Class;
       Data : out Ada.Streams.Stream_Element_Array;
       Last : out Ada.Streams.Stream_Element_Offset);
-   --  Returns available data received throgh standard output stream. If no
-   --  data was read you will get Standard_Output_Available notification latter
+   --  Returns available data received through standard output stream. If no
+   --  data was read, the Standard_Output_Available notification will be
+   --  emitted later.
 
    procedure Close_Standard_Error (Self : in out Process'Class);
    --  Do nothing if Self.Status /= Running
