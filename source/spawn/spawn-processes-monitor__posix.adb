@@ -426,7 +426,10 @@ package body Spawn.Processes.Monitor is
          end case;
 
          Process.Status := Not_Running;
-         Process.Listener.Finished (Process.Exit_Status, Process.Exit_Code);
+
+         if Process.Listener /= null then
+            Process.Listener.Finished (Process.Exit_Status, Process.Exit_Code);
+         end if;
       end if;
    end Check_Children;
 
@@ -507,11 +510,15 @@ package body Spawn.Processes.Monitor is
       if Kind = Launch then
          if Process.Exit_Code = Process_Exit_Code'Last then
             Process.Status := Running;
-            Process.Listener.Started;
-            Process.Listener.Standard_Input_Available;
+            if Process.Listener /= null then
+               Process.Listener.Started;
+               Process.Listener.Standard_Input_Available;
+            end if;
 
          else
-            Process.Listener.Error_Occurred (Integer (Process.Exit_Code));
+            if Process.Listener /= null then
+               Process.Listener.Error_Occurred (Integer (Process.Exit_Code));
+            end if;
          end if;
       end if;
    end My_End_Callback;
@@ -527,11 +534,17 @@ package body Spawn.Processes.Monitor is
    begin
       case Kind is
          when Stdin =>
-            Process.Listener.Standard_Input_Available;
+            if Process.Listener /= null then
+               Process.Listener.Standard_Input_Available;
+            end if;
          when Stdout =>
-            Process.Listener.Standard_Output_Available;
+            if Process.Listener /= null then
+               Process.Listener.Standard_Output_Available;
+            end if;
          when Stderr =>
-            Process.Listener.Standard_Error_Available;
+            if Process.Listener /= null then
+               Process.Listener.Standard_Error_Available;
+            end if;
          when Launch =>
             declare
                use type Ada.Streams.Stream_Element_Offset;
@@ -641,7 +654,9 @@ package body Spawn.Processes.Monitor is
    begin
       --  Create pipes for children's strio
       if (for some X of std => Posix.pipe2 (X, Pipe_Flags) /= 0) then
-         Self.Listener.Error_Occurred (GNAT.OS_Lib.Errno);
+         if Self.Listener /= null then
+            Self.Listener.Error_Occurred (GNAT.OS_Lib.Errno);
+         end if;
          Interfaces.C.Strings.Free (dir);
          return;
       end if;
@@ -652,7 +667,9 @@ package body Spawn.Processes.Monitor is
 
       if pid = -1 then
          --  Fork failed
-         Self.Listener.Error_Occurred (GNAT.OS_Lib.Errno);
+         if Self.Listener /= null then
+            Self.Listener.Error_Occurred (GNAT.OS_Lib.Errno);
+         end if;
          Free (argv);
          Free (envp);
          Interfaces.C.Strings.Free (dir);
@@ -688,7 +705,9 @@ package body Spawn.Processes.Monitor is
       if (for some X in std'Range =>
             Posix.close (std (X) (Child_Ends (X))) /= 0)
       then
-         Self.Listener.Error_Occurred (GNAT.OS_Lib.Errno);
+         if Self.Listener /= null then
+            Self.Listener.Error_Occurred (GNAT.OS_Lib.Errno);
+         end if;
          return;
       end if;
 
@@ -699,7 +718,9 @@ package body Spawn.Processes.Monitor is
                Posix.F_SETFL,
                Posix.O_NONBLOCK) /= 0)
       then
-         Self.Listener.Error_Occurred (GNAT.OS_Lib.Errno);
+         if Self.Listener /= null then
+            Self.Listener.Error_Occurred (GNAT.OS_Lib.Errno);
+         end if;
          return;
       end if;
 

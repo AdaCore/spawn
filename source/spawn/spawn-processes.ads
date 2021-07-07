@@ -149,7 +149,8 @@ package Spawn.Processes is
      (Self     : in out Process'Class;
       Listener : Process_Listener_Access)
         with Pre => Self.Status = Not_Running;
-   --  Process's events listener
+   --  Associate a Listener to this event. There may be either zero or one
+   --  listener associated to each Process.
 
    procedure Close_Standard_Input (Self : in out Process'Class);
    --  Do nothing if Self.Status /= Running
@@ -196,7 +197,10 @@ private
       Exit_Status : Process_Exit_Status := Normal;
       Exit_Code   : Process_Exit_Code := Process_Exit_Code'Last;
       Status      : Process_Status := Not_Running;
+
       Listener    : Process_Listener_Access;
+      --  The associated listener. Note: this may be null.
+
       Program     : Ada.Strings.Unbounded.Unbounded_String;
       Directory   : Ada.Strings.Unbounded.Unbounded_String;
    end record;
