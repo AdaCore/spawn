@@ -27,7 +27,7 @@ library project Spawn is
    type Library_Kind is ("static", "static-pic", "relocatable");
    Library_Type : Library_Kind := external ("LIBRARY_TYPE", "static");
 
-   type Spawn_Build_Kind is ("dev", "prod", "coverage");
+   type Spawn_Build_Kind is ("dev", "prod", "coverage", "AddressSanitizer");
    Build_Mode : Spawn_Build_Kind :=
      external ("SPAWN_BUILD_MODE", external ("BUILD_MODE", "prod"));
 
@@ -114,6 +114,15 @@ library project Spawn is
             "--coverage");
 
          Linker_Options := Linker_Options & ("--coverage");
+
+       when "AddressSanitizer" =>
+	    Ada_Switches := Ada_Switches & (
+            --  Standard development flags
+            "-O0", "-g",
+            --  Enable the AddressSanitizer
+            "-fsanitize=address");
+
+         Linker_Options := Linker_Options & ("-fsanitize=address");
    end case;
 
    package Compiler is
