@@ -21,12 +21,16 @@ jobs:
       - uses: actions/cache@v2
         with:
           path: ./cached_gnat
-          key: ${{ runner.os }}-gnat-2020.1
-          restore-keys: ${{ runner.os }}-gnat-2020.1
-      - name: Get GNAT Community 2020 toolchain
-        uses: ada-actions/toolchain@ce2020
+          key: ${{ runner.os }}-alire-v1
+          restore-keys: ${{ runner.os }}-alire-v1
+      - name: Get GNAT toolchain with alire
+        uses: alire-project/setup-alire@v1
         with:
-          distrib: community
-          install_dir: ./cached_gnat
+          toolchain: gnat_native^11 gprbuild^21
+          toolchain_dir: ./cached_gnat
       - name: Build and test
-        run: make all check
+        shell: bash
+        run: |
+          export PATH=`ls -d $PWD/cached_gnat/*/bin |tr '\n' ':'`$PATH
+          echo PATH=$PATH
+          make all check
