@@ -19,7 +19,7 @@
 -- version 3.1, as published by the Free Software Foundation.               --
 ------------------------------------------------------------------------------
 
---  Asynchronous API with listener pattern
+--  Asynchronous process control API with listener pattern
 
 with Ada.Exceptions;
 with Ada.Streams;
@@ -33,11 +33,39 @@ private with Spawn.Internal;
 
 package Spawn.Processes is
 
+   type Process is tagged limited private;
+   --  The Process represents a running, exited, crashed or not-yet-running
+   --  process.
+   --
+   --  The just created process has Not_Running status.
+   --  In this status Program, Arguments, Environment, Working_Directory and
+   --  Listener could be configured on the process. The Start call changes
+   --  the process status to Starting. Since then no configuration allowed.
+   --  If the OS is able to run corresponding program then the status becomes
+   --  Running and Started, Standard_Input_Available events are triggered on
+   --  the listener. Otherwise status becames Not_Running and Error_Occurred
+   --  event is signaled.
+   --  A running process keeps Running state till it crashes or exit normally,
+   --  then state bacames Not_Running and Finished event is triggered.
+   --
+   --  Note: Make sure to keep Process object alive while it has Running
+   --  state. The suggested pattern is to keep it in the listener object.
+   --
+   --  The running process has standard output and standard error streams to
+   --  read from and standard input stream to write. Corresponding events
+   --  notify the listener when such calls are available.
+
    type Process_Exit_Status is (Normal, Crash);
+   --  Process exit status
+   --  @value Normal   The normal process termination case
+   --  @value Crash    The abnormal process termination case
 
    type Process_Exit_Code is new Interfaces.Unsigned_32;
+   --  Exit status reported by the child process on normal exit.
+   --  For crash the meaning depends on the OS.
 
    type Process_Listener is limited interface;
+   --  A process status event listener.
    type Process_Listener_Access is access all Process_Listener'Class;
 
    procedure Standard_Output_Available
@@ -61,7 +89,7 @@ package Spawn.Processes is
      Exit_Code   : Process_Exit_Code) is null;
    --  Called when the process finishes. Exit_Status is exit status of the
    --  process. On normal exit, Exit_Code is the exit code of the process,
-   --  on crash its meaning depends from operating system. For POSIX systems
+   --  on crash its meaning depends on the operating system. For POSIX systems
    --  it is number of signal when available, on Windows it is process exit
    --  code.
 
@@ -81,10 +109,14 @@ package Spawn.Processes is
     (Not_Running,
      Starting,
      Running);
-   --  ??? What is the difference between Starting and Running? When are these
-   --  set?
-
-   type Process is tagged limited private;
+   --  Current process status.
+   --
+   --  @value Not_Running  The process has not been started yet or has been
+   --  exited/crashed already. Call Start to run it.
+   --
+   --  @value Starting     The process is launching, but it isn't run yet.
+   --
+   --  @value Running      The process is running.
 
    function Arguments (Self : Process'Class)
      return Spawn.String_Vectors.UTF_8_String_Vector;
@@ -183,6 +215,9 @@ package Spawn.Processes is
      (Self : in out Process'Class;
       Data : out Ada.Streams.Stream_Element_Array;
       Last : out Ada.Streams.Stream_Element_Offset);
+   --  Returns available data received through standard error stream. If no
+   --  data was read, the Standard_Error_Available notification will be
+   --  emitted later.
 
 private
 
