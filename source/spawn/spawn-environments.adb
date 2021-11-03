@@ -66,7 +66,7 @@ package body Spawn.Environments is
       Name  : UTF_8_String;
       Value : UTF_8_String) is
    begin
-      Self.Map.Insert (Name, Value);
+      Self.Map.Include (Name, Value);
    end Insert;
 
    ------------
@@ -79,7 +79,7 @@ package body Spawn.Environments is
    is
    begin
       for J in Environemnt.Map.Iterate loop
-         Self.Map.Insert
+         Self.Map.Include
            (UTF_8_String_Maps.Key (J),
             UTF_8_String_Maps.Element (J));
       end loop;
