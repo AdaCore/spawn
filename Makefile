@@ -27,7 +27,7 @@ check:
 	done
 
 install:
-	gprinstall $(GPRINSTALL_FLAGS) -p -P gnat/spawn.gpr
+	gprinstall $(GPRINSTALL_FLAGS) -f -p -P gnat/spawn.gpr
 clean:
 	gprclean -q -P gnat/spawn.gpr
 
