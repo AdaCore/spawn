@@ -23,7 +23,6 @@ with Ada.Characters.Wide_Latin_1;
 with Ada.Strings.UTF_Encoding.Wide_Strings;
 with Ada.Strings.Wide_Fixed;
 with Ada.Strings.Wide_Unbounded;
-with Ada.Unchecked_Conversion;
 with Interfaces.C.Strings;
 
 pragma Warnings (Off);
