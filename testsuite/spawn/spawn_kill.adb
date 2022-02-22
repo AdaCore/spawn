@@ -120,7 +120,6 @@ procedure Spawn_Kill is
         (Self          : in out Listener;
          Process_Error : Integer)
       is
-         pragma Unreferenced (Self);
       begin
          Ada.Text_IO.Put_Line ("Error_Occurred:" & (Process_Error'Img));
          Ada.Command_Line.Set_Exit_Status (Ada.Command_Line.Failure);
