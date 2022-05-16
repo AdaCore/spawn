@@ -81,7 +81,7 @@ package body Spawn.Processes.Windows is
      (Command_Line : in out Ada.Strings.Wide_Unbounded.Unbounded_Wide_String;
       Argument     : Ada.Strings.Unbounded.Unbounded_String)
    is
-      --  Implementation of the subprogam based on Microsoft's blog post
+      --  Implementation of the subprogram based on Microsoft's blog post
       --  "Everyone quotes command line arguments the wrong way".
 
       use Ada.Strings.Wide_Unbounded;
@@ -98,7 +98,7 @@ package body Spawn.Processes.Windows is
           (Ada.Strings.Unbounded.To_String (Argument));
 
       J : Natural;  --  Iterator
-      N : Natural;  --  Number of sequencial backslashes.
+      N : Natural;  --  Number of sequential backslashes.
 
    begin
       if S'Length /= 0
@@ -299,7 +299,7 @@ package body Spawn.Processes.Windows is
 
          procedure Ignore (Value : System.Win32.BOOL) is null;
          procedure Ignore (Value : System.Win32.DWORD) is null;
-         --  Used to ignore returnd value of the Windows API functions
+         --  Used to ignore returned value of the Windows API functions
 
          Process_Id_Image : constant String :=
            Spawn.Windows_API.DWORD'Image
@@ -779,9 +779,9 @@ package body Spawn.Processes.Windows is
           and then not Is_Error
             (System.Win32.CloseHandle (Self.pid.hThread))
       then
-         --  Process exit code can be aplication defined code, Win32 error
+         --  Process exit code can be application defined code, Win32 error
          --  code, HRESULT code (including Win32 code or NTSTATUS code
-         --  converted into HRESULT), or NTSTATUS code. It is imposible to
+         --  converted into HRESULT), or NTSTATUS code. It is impossible to
          --  recognize used format exactly, thus some heuristic is used to
          --  detect "crash" cases, primary cases when system's HRESULT and
          --  NTSTATUS code reports failure. All custom error codes are
@@ -801,7 +801,7 @@ package body Spawn.Processes.Windows is
          --  For both NTSTATUS and HRESULT 'C' is reserved for custom codes.
          --  All these codes interpreted as normal termination.
          --
-         --  'N' is '0' for native NTSTATUS, but '1' when NTSTATUS is convenred
+         --  'N' is '0' for native NTSTATUS, but '1' when NTSTATUS is converted
          --  into HRESULT.
          --
          --  'Sev" is severity of the NTSTATUS. Only 2#11# is interpreted as

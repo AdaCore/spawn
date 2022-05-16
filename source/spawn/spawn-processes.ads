@@ -43,10 +43,10 @@ package Spawn.Processes is
    --  the process status to Starting. Since then no configuration allowed.
    --  If the OS is able to run corresponding program then the status becomes
    --  Running and Started, Standard_Input_Available events are triggered on
-   --  the listener. Otherwise status becames Not_Running and Error_Occurred
+   --  the listener. Otherwise status becomes Not_Running and Error_Occurred
    --  event is signaled.
    --  A running process keeps Running state till it crashes or exit normally,
-   --  then state bacames Not_Running and Finished event is triggered.
+   --  then state becomes Not_Running and Finished event is triggered.
    --
    --  Note: Make sure to keep Process object alive while it has Running
    --  state. The suggested pattern is to keep it in the listener object.

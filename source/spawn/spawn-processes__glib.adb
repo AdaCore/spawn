@@ -176,7 +176,7 @@ package body Spawn.Processes is
       In_Callback : constant Boolean :=
         Pipe.Event /= Glib.Main.No_Source_Id;
    begin
-      --  Protect against uninitalized value
+      --  Protect against uninitialized value
       Last := Data'First - 1;
 
       case Status is

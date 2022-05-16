@@ -298,7 +298,7 @@ package body Spawn.Processes.Monitor is
                end if;
 
                if fds (Index).revents /= 0 then
-                  --  Some error happend
+                  --  Some error happened
                   End_Callback (Process, Kind);
                   --  Don't listen this fd since error
                   Remove_Descriptor (Process, Kind);
