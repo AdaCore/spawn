@@ -1,5 +1,5 @@
 --
---  Copyright (C) 2018-2021, AdaCore
+--  Copyright (C) 2018-2022, AdaCore
 --
 --  SPDX-License-Identifier: Apache-2.0
 --
@@ -131,8 +131,8 @@ library project Spawn is
                use "spawn-environments-internal__posix.ads";
             for Body ("Spawn.Environments.Internal")
                use "spawn-environments-internal__posix.adb";
-            for Body ("Spawn.Processes")
-               use "spawn-processes__posix.adb";
+            for Body ("Spawn.Processes.Platform")
+               use "spawn-processes-platform__posix.adb";
             for Body ("Spawn.Environments.Search_In_Path")
                use "spawn-environments-search_in_path__posix.adb";
             for Body ("Spawn.Processes.Monitor")
@@ -150,8 +150,8 @@ library project Spawn is
                use "spawn-environments-internal__windows.ads";
             for Body ("Spawn.Environments.Internal")
                use "spawn-environments-internal__windows.adb";
-            for Body ("Spawn.Processes")
-               use "spawn-processes__windows.adb";
+            for Body ("Spawn.Processes.Platform")
+               use "spawn-processes-platform__windows.adb";
             for Body ("Spawn.Environments.Search_In_Path")
                use "spawn-environments-search_in_path__windows.adb";
             for Body ("Spawn.Processes.Monitor")
