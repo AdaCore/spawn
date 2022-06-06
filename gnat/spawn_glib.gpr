@@ -1,5 +1,5 @@
 --
---  Copyright (C) 2018-2019, AdaCore
+--  Copyright (C) 2018-2022, AdaCore
 --
 --  SPDX-License-Identifier: Apache-2.0
 --
@@ -124,8 +124,8 @@ library project Spawn_Glib is
                use "spawn-environments-internal__glib.adb";
             for Body ("Spawn.Environments.Search_In_Path")
                use "spawn-environments-search_in_path__posix.adb";
-            for Body ("Spawn.Processes")
-               use "spawn-processes__glib.adb";
+            for Body ("Spawn.Processes.Platform")
+               use "spawn-processes-platform__glib.adb";
          when "Windows_NT" =>
             for Spec ("Spawn.Internal")
                use "spawn-internal__glib_windows.ads";
@@ -139,8 +139,8 @@ library project Spawn_Glib is
                use "spawn-environments-internal__windows.adb";
             for Body ("Spawn.Environments.Search_In_Path")
                use "spawn-environments-search_in_path__windows.adb";
-            for Body ("Spawn.Processes")
-               use "spawn-processes__glib_windows.adb";
+            for Body ("Spawn.Processes.Platform")
+               use "spawn-processes-platform__glib_windows.adb";
       end case;
    end Naming;
 

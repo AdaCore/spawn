@@ -1,5 +1,5 @@
 --
---  Copyright (C) 2018-2021, AdaCore
+--  Copyright (C) 2018-2022, AdaCore
 --
 --  SPDX-License-Identifier: Apache-2.0
 --
@@ -14,7 +14,8 @@ pragma Warnings (Off);
 with System.Win32;
 pragma Warnings (On);
 
-package body Spawn.Processes is
+separate (Spawn.Processes)
+package body Platform is
 
    subtype Context is Internal.Context;
 
@@ -61,16 +62,6 @@ package body Spawn.Processes is
    Callback : constant array (Stdout .. Stderr) of Read_Write_Ex.Callback :=
      (Standard_Output_Callback'Access,
       Standard_Error_Callback'Access);
-
-   ---------------
-   -- Arguments --
-   ---------------
-
-   function Arguments (Self : Process'Class)
-                       return Spawn.String_Vectors.UTF_8_String_Vector is
-   begin
-      return Self.Arguments;
-   end Arguments;
 
    --------------------------
    -- Close_Standard_Error --
@@ -158,45 +149,6 @@ package body Spawn.Processes is
       Windows.Do_Start_Process (Self, On_Start'Access);
    end Do_Start_Process;
 
-   -----------------
-   -- Environment --
-   -----------------
-
-   function Environment
-     (Self : Process'Class)
-      return Spawn.Environments.Process_Environment is
-   begin
-      return Self.Environment;
-   end Environment;
-
-   ---------------
-   -- Exit_Code --
-   ---------------
-
-   function Exit_Code (Self : Process'Class) return Process_Exit_Code is
-   begin
-      return Self.Exit_Code;
-   end Exit_Code;
-
-   -----------------
-   -- Exit_Status --
-   -----------------
-
-   function Exit_Status (Self : Process'Class) return Process_Exit_Status is
-   begin
-      return Self.Exit_Status;
-   end Exit_Status;
-
-   --------------
-   -- Finalize --
-   --------------
-
-   overriding procedure Finalize (Self : in out Process) is
-   begin
-      --  Shall we check if the process is still running here?
-      null;
-   end Finalize;
-
    ------------------
    -- Kill_Process --
    ------------------
@@ -205,15 +157,6 @@ package body Spawn.Processes is
    begin
       Windows.Do_Kill_Process (Self);
    end Kill_Process;
-
-   --------------
-   -- Listener --
-   --------------
-
-   function Listener (Self : Process'Class) return Process_Listener_Access is
-   begin
-      return Self.Listener;
-   end Listener;
 
    -----------------------
    -- My_Death_Collback --
@@ -230,15 +173,6 @@ package body Spawn.Processes is
    begin
       Windows.On_Process_Died (Process.all);
    end My_Death_Collback;
-
-   -------------
-   -- Program --
-   -------------
-
-   function Program (Self : Process'Class) return UTF_8_String is
-   begin
-      return Ada.Strings.Unbounded.To_String (Self.Program);
-   end Program;
 
    -------------------------
    -- Read_Standard_Error --
@@ -263,62 +197,6 @@ package body Spawn.Processes is
    begin
       Do_Read (Self, Data, Last, Stdout);
    end Read_Standard_Output;
-
-   -------------------
-   -- Set_Arguments --
-   -------------------
-
-   procedure Set_Arguments
-     (Self      : in out Process'Class;
-      Arguments : Spawn.String_Vectors.UTF_8_String_Vector) is
-   begin
-      Self.Arguments := Arguments;
-   end Set_Arguments;
-
-   ---------------------
-   -- Set_Environment --
-   ---------------------
-
-   procedure Set_Environment
-     (Self        : in out Process'Class;
-      Environment : Spawn.Environments.Process_Environment) is
-   begin
-      Self.Environment := Environment;
-   end Set_Environment;
-
-   ------------------
-   -- Set_Listener --
-   ------------------
-
-   procedure Set_Listener
-     (Self     : in out Process'Class;
-      Listener : Process_Listener_Access)
-   is
-   begin
-      Self.Listener := Listener;
-   end Set_Listener;
-
-   -----------------
-   -- Set_Program --
-   -----------------
-
-   procedure Set_Program
-     (Self    : in out Process'Class;
-      Program : UTF_8_String) is
-   begin
-      Self.Program := Ada.Strings.Unbounded.To_Unbounded_String (Program);
-   end Set_Program;
-
-   ---------------------------
-   -- Set_Working_Directory --
-   ---------------------------
-
-   procedure Set_Working_Directory
-     (Self      : in out Process'Class;
-      Directory : UTF_8_String) is
-   begin
-      Self.Directory := Ada.Strings.Unbounded.To_Unbounded_String (Directory);
-   end Set_Working_Directory;
 
    -----------------------------
    -- Standard_Error_Callback --
@@ -370,15 +248,6 @@ package body Spawn.Processes is
       Do_Start_Process (Self);
    end Start;
 
-   ------------
-   -- Status --
-   ------------
-
-   function Status (Self : Process'Class) return Process_Status is
-   begin
-      return Self.Status;
-   end Status;
-
    -----------------------
    -- Terminate_Process --
    -----------------------
@@ -387,15 +256,6 @@ package body Spawn.Processes is
    begin
       Windows.Do_Terminate_Process (Self);
    end Terminate_Process;
-
-   -----------------------
-   -- Working_Directory --
-   -----------------------
-
-   function Working_Directory (Self : Process'Class) return UTF_8_String is
-   begin
-      return Ada.Strings.Unbounded.To_String (Self.Directory);
-   end Working_Directory;
 
    --------------------------
    -- Write_Standard_Input --
@@ -444,4 +304,4 @@ package body Spawn.Processes is
       Windows.Do_Write (Self, Data, Last, On_No_Data'Access);
    end Write_Standard_Input;
 
-end Spawn.Processes;
+end Platform;
