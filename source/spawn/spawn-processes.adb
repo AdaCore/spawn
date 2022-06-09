@@ -69,6 +69,60 @@ package body Spawn.Processes is
    procedure Close_Standard_Output (Self : in out Process'Class)
      renames Platform.Close_Standard_Output;
 
+   -------------------------
+   -- Emit_Error_Occurred --
+   -------------------------
+
+   overriding procedure Emit_Error_Occurred
+     (Self  : in out Process;
+      Error : Integer) is
+   begin
+      Self.Listener.Error_Occurred (Error);
+
+   exception
+      when others =>
+         null;
+   end Emit_Error_Occurred;
+
+   ---------------------------
+   -- Emit_Stderr_Available --
+   ---------------------------
+
+   overriding procedure Emit_Stderr_Available (Self : in out Process) is
+   begin
+      Self.Listener.Standard_Error_Available;
+
+   exception
+      when others =>
+         null;
+   end Emit_Stderr_Available;
+
+   --------------------------
+   -- Emit_Stdin_Available --
+   --------------------------
+
+   overriding procedure Emit_Stdin_Available (Self : in out Process) is
+   begin
+      Self.Listener.Standard_Input_Available;
+
+   exception
+      when others =>
+         null;
+   end Emit_Stdin_Available;
+
+   ---------------------------
+   -- Emit_Stdout_Available --
+   ---------------------------
+
+   overriding procedure Emit_Stdout_Available (Self : in out Process) is
+   begin
+      Self.Listener.Standard_Output_Available;
+
+   exception
+      when others =>
+         null;
+   end Emit_Stdout_Available;
+
    -----------------
    -- Environment --
    -----------------
@@ -208,6 +262,24 @@ package body Spawn.Processes is
    begin
       Self.Program := Ada.Strings.Unbounded.To_Unbounded_String (Program);
    end Set_Program;
+
+   ----------------------------
+   -- Set_Standard_Input_PTY --
+   ----------------------------
+
+   procedure Set_Standard_Input_PTY (Self : in out Process'Class) is
+   begin
+      Self.Use_PTY (Stdin) := True;
+   end Set_Standard_Input_PTY;
+
+   -----------------------------
+   -- Set_Standard_Output_PTY --
+   -----------------------------
+
+   procedure Set_Standard_Output_PTY (Self : in out Process'Class) is
+   begin
+      Self.Use_PTY (Stdout) := True;
+   end Set_Standard_Output_PTY;
 
    ---------------------------
    -- Set_Working_Directory --

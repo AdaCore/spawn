@@ -30,6 +30,7 @@ library project Spawn_Glib is
    for Library_Dir  use "../.libs/spawn_glib/" & Library_Type;
    for Library_Name use "spawn_glib";
    for Source_Dirs use ("../source/spawn");
+   for Languages use ("Ada", "c");
 
    case Library_Type is
       when "relocatable" =>
@@ -51,7 +52,9 @@ library project Spawn_Glib is
             "spawn-processes-windows.adb");
 
       when "Windows_NT" =>
-         for Excluded_Source_Files use Common_Excluded;
+         for Excluded_Source_Files use Common_Excluded &
+           ("spawn-channels.ads",
+            "spawn-channels.adb");
    end case;
 
    Ada_Switches := ();

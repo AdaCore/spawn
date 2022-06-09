@@ -1,5 +1,5 @@
 --
---  Copyright (C) 2018-2019, AdaCore
+--  Copyright (C) 2018-2022, AdaCore
 --
 --  SPDX-License-Identifier: Apache-2.0
 --
@@ -52,10 +52,21 @@ package Spawn.Internal is
    type Pipe_Array is array (Pipe_Kinds) of aliased Context;
    --  Context for each pipe kind
 
-   type Process is new Ada.Finalization.Limited_Controlled with record
+   type Process is
+     abstract new Ada.Finalization.Limited_Controlled with record
       pid   : aliased Windows_API.PROCESS_INFORMATION;
       pipe  : Pipe_Array;
       Index : Natural := 0;
    end record;
+
+   procedure Emit_Stdin_Available (Self : in out Process) is abstract;
+
+   procedure Emit_Stdout_Available (Self : in out Process) is abstract;
+
+   procedure Emit_Stderr_Available (Self : in out Process) is abstract;
+
+   procedure Emit_Error_Occurred
+     (Self          : in out Process;
+      Process_Error : Integer) is abstract;
 
 end Spawn.Internal;
