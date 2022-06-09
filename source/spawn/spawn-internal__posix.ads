@@ -1,5 +1,5 @@
 --
---  Copyright (C) 2018-2019, AdaCore
+--  Copyright (C) 2018-2022, AdaCore
 --
 --  SPDX-License-Identifier: Apache-2.0
 --
@@ -24,10 +24,21 @@ private package Spawn.Internal is
    type Index_Array is array (Pipe_Kinds) of Natural;
    --  Index in poll for each descriptors array
 
-   type Process is new Ada.Finalization.Limited_Controlled with record
+   type Process is
+     abstract new Ada.Finalization.Limited_Controlled with record
       pid   : Interfaces.C.int := 0;
       pipe  : Pipe_Array := (others => 0);
       Index : Index_Array := (others => 0);
    end record;
+
+   procedure Emit_Stdin_Available (Self : in out Process) is abstract;
+
+   procedure Emit_Stdout_Available (Self : in out Process) is abstract;
+
+   procedure Emit_Stderr_Available (Self : in out Process) is abstract;
+
+   procedure Emit_Error_Occurred
+     (Self          : in out Process;
+      Process_Error : Integer) is abstract;
 
 end Spawn.Internal;

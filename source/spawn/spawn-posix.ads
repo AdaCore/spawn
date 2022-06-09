@@ -1,5 +1,5 @@
 --
---  Copyright (C) 2018-2021, AdaCore
+--  Copyright (C) 2018-2022, AdaCore
 --
 --  SPDX-License-Identifier: Apache-2.0
 --
@@ -8,6 +8,12 @@ with Ada.Streams;
 with Interfaces.C.Strings;
 
 package Spawn.Posix is
+
+   function open
+     (pathname : Interfaces.C.char_array;
+      flags    : Interfaces.C.int;
+      mode     : Interfaces.C.int) return Interfaces.C.int
+     with Import, Convention => C, External_Name => "open";
 
    function close (fd : Interfaces.C.int) return Interfaces.C.int
      with Import, Convention => C, External_Name => "close";
@@ -39,6 +45,10 @@ package Spawn.Posix is
      with Import, Convention => C, External_Name => "SPAWN_O_CLOEXEC";
    O_NONBLOCK : constant Interfaces.C.int
      with Import, Convention => C, External_Name => "SPAWN_O_NONBLOCK";
+   O_RDWR     : constant Interfaces.C.int
+     with Import, Convention => C, External_Name => "SPAWN_O_RDWR";
+   O_NOCTTY   : constant Interfaces.C.int
+     with Import, Convention => C, External_Name => "SPAWN_O_NOCTTY";
    POLLIN     : constant Interfaces.C.unsigned_short
      with Import, Convention => C, External_Name => "SPAWN_POLLIN";
    POLLOUT    : constant Interfaces.C.unsigned_short
@@ -105,8 +115,13 @@ package Spawn.Posix is
    --  An extra float argument is used to make this binding compatible
    --  with amd64 ABI for C functions with ellipsis (...).
 
+   F_SETFD : constant Interfaces.C.int
+     with Import, Convention => C, External_Name => "SPAWN_F_SETFD";
    F_SETFL : constant Interfaces.C.int
      with Import, Convention => C, External_Name => "SPAWN_F_SETFL";
+
+   FD_CLOEXEC  : constant Interfaces.C.int
+     with Import, Convention => C, External_Name => "SPAWN_FD_CLOEXEC";
 
    subtype constrained_chars_ptr_array is
      Interfaces.C.Strings.chars_ptr_array (1 .. Interfaces.C.size_t'Last);
@@ -119,5 +134,21 @@ package Spawn.Posix is
      with Import, Convention => C, External_Name => "SPAWN_EINTR";
    EAGAIN : constant Interfaces.C.int
      with Import, Convention => C, External_Name => "SPAWN_EAGAIN";
+
+   function posix_openpt
+     (flags : Interfaces.C.int) return Interfaces.C.int
+     with Import, Convention => C, External_Name => "posix_openpt";
+
+   function grantpt (fd : Interfaces.C.int) return Interfaces.C.int
+     with Import, Convention => C, External_Name => "grantpt";
+
+   function unlockpt (fd : Interfaces.C.int) return Interfaces.C.int
+     with Import, Convention => C, External_Name => "unlockpt";
+
+   function ptsname_r
+     (fd     : Interfaces.C.int;
+      buf    : out Interfaces.C.char_array;
+      buflen : Interfaces.C.size_t) return Interfaces.C.int
+     with Import, Convention => C, External_Name => "ptsname_r";
 
 end Spawn.Posix;

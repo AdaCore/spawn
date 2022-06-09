@@ -1,5 +1,5 @@
 --
---  Copyright (C) 2018-2019, AdaCore
+--  Copyright (C) 2018-2022, AdaCore
 --
 --  SPDX-License-Identifier: Apache-2.0
 --
@@ -52,11 +52,22 @@ private package Spawn.Internal is
    end record;
    --  A wrapper to pass process pointer to C binding functions
 
-   type Process is new Ada.Finalization.Limited_Controlled with record
+   type Process is
+     abstract new Ada.Finalization.Limited_Controlled with record
       Reference : aliased Process_Reference;
       Event     : Glib.Main.G_Source_Id := 0;
       pid       : aliased Windows_API.PROCESS_INFORMATION;
       pipe      : Pipe_Array;
    end record;
+
+   procedure Emit_Stdin_Available (Self : in out Process) is abstract;
+
+   procedure Emit_Stdout_Available (Self : in out Process) is abstract;
+
+   procedure Emit_Stderr_Available (Self : in out Process) is abstract;
+
+   procedure Emit_Error_Occurred
+     (Self          : in out Process;
+      Process_Error : Integer) is abstract;
 
 end Spawn.Internal;

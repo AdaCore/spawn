@@ -1,5 +1,5 @@
 --
---  Copyright (C) 2018-2021, AdaCore
+--  Copyright (C) 2018-2022, AdaCore
 --
 --  SPDX-License-Identifier: Apache-2.0
 --
@@ -135,6 +135,14 @@ package Spawn.Processes is
    --  Executables name. Note that this should be a resolved path,
    --  this API does not look for executables on the PATH.
 
+   procedure Set_Standard_Input_PTY (Self : in out Process'Class);
+   --  Configure standard input stream to use pseudo terminal instead
+   --  of pipe for communications.
+
+   procedure Set_Standard_Output_PTY (Self : in out Process'Class);
+   --  Configure standard output stream to use pseudo terminal instead
+   --  of pipe for communications.
+
    procedure Start (Self : in out Process'Class)
      with Pre => Self.Status = Not_Running;
 
@@ -210,6 +218,8 @@ private
    subtype Pipe_Kinds is Internal.Pipe_Kinds;
    subtype Standard_Pipe is Pipe_Kinds range Stdin .. Stderr;
 
+   type Pipe_Flags is array (Standard_Pipe) of Boolean;
+
    type Process is new Spawn.Internal.Process with record
       Arguments   : Spawn.String_Vectors.UTF_8_String_Vector;
       Environment : Spawn.Environments.Process_Environment :=
@@ -223,8 +233,19 @@ private
 
       Program     : Ada.Strings.Unbounded.Unbounded_String;
       Directory   : Ada.Strings.Unbounded.Unbounded_String;
+      Use_PTY     : Pipe_Flags := (others => False);
    end record;
 
    overriding procedure Finalize (Self : in out Process);
+
+   overriding procedure Emit_Stdin_Available (Self : in out Process);
+
+   overriding procedure Emit_Stdout_Available (Self : in out Process);
+
+   overriding procedure Emit_Stderr_Available (Self : in out Process);
+
+   overriding procedure Emit_Error_Occurred
+     (Self  : in out Process;
+      Error : Integer);
 
 end Spawn.Processes;

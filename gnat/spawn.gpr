@@ -32,7 +32,7 @@ library project Spawn is
    for Source_Dirs use ("../source/spawn");
    for Languages use ("Ada", "c");
 
-   Common_Excluded := ();
+   Common_Excluded := ("spawn-channels.ads", "spawn-channels.adb");
 
    case OS_API is
       when "unix" =>
