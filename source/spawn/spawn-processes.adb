@@ -113,8 +113,12 @@ package body Spawn.Processes is
    -- Kill_Process --
    ------------------
 
-   procedure Kill_Process (Self : in out Process'Class)
-     renames Platform.Kill_Process;
+   procedure Kill_Process (Self : in out Process'Class) is
+   begin
+      if Self.Status = Running then
+         Platform.Kill_Process (Self);
+      end if;
+   end Kill_Process;
 
    --------------
    -- Listener --
@@ -236,8 +240,12 @@ package body Spawn.Processes is
    -- Terminate_Process --
    -----------------------
 
-   procedure Terminate_Process (Self : in out Process'Class)
-     renames Platform.Terminate_Process;
+   procedure Terminate_Process (Self : in out Process'Class) is
+   begin
+      if Self.Status = Running then
+         Platform.Terminate_Process (Self);
+      end if;
+   end Terminate_Process;
 
    -----------------------
    -- Working_Directory --
