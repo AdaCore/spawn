@@ -221,18 +221,23 @@ package body Spawn.Channels is
 
       Error  : aliased Glib.Error.GError;
       Count  : aliased Glib.Gsize := 0;
-      Status : constant Glib.IOChannel.GIOStatus :=
+      Status : Glib.IOChannel.GIOStatus;
+
+   begin
+      Last := Data'First - 1;
+      --  Mark operation as failed. On success of the opration correspinding
+      --  value is set.
+
+      if Self.Stderr_Parent = null then
+         return;
+      end if;
+
+      Status :=
         Glib.IOChannel.Read_Chars
           (Self       => Self.Stderr_Parent,
            Buf        => Data,
            Bytes_Read => Count'Access,
            Error      => Error'Access);
-
-   begin
-      --  Protect against uninitialized value
-
-      Last := Data'First - 1;
-
       case Status is
          when Glib.IOChannel.G_Io_Status_Eof =>
             --  Reading is completed, so no watching is required
@@ -271,16 +276,23 @@ package body Spawn.Channels is
 
       Error  : aliased Glib.Error.GError;
       Count  : aliased Glib.Gsize := 0;
-      Status : constant Glib.IOChannel.GIOStatus :=
+      Status : Glib.IOChannel.GIOStatus;
+
+   begin
+      Last := Data'First - 1;
+      --  Mark operation as failed. On success of the opration correspinding
+      --  value is set.
+
+      if Self.Stdout_Parent = null then
+         return;
+      end if;
+
+      Status :=
         Glib.IOChannel.Read_Chars
           (Self       => Self.Stdout_Parent,
            Buf        => Data,
            Bytes_Read => Count'Access,
            Error      => Error'Access);
-
-   begin
-      --  Protect against uninitialized value
-      Last := Data'First - 1;
 
       case Status is
          when Glib.IOChannel.G_Io_Status_Eof =>
@@ -875,14 +887,23 @@ package body Spawn.Channels is
    is
       Error  : aliased Glib.Error.GError;
       Count  : aliased Glib.Gsize;
-      Status : constant Glib.IOChannel.GIOStatus :=
+      Status : Glib.IOChannel.GIOStatus;
+
+   begin
+      Last := Data'First - 1;
+      --  Mark operation as failed. On success of the opration correspinding
+      --  value is set.
+
+      if Self.Stdout_Parent = null then
+         return;
+      end if;
+
+      Status :=
         Glib.IOChannel.Write_Chars
           (Self          => Self.Stdin_Parent,
            Buf           => Data,
            Bytes_Written => Count'Access,
            Error         => Error'Access);
-
-   begin
       Last := Data'First + Ada.Streams.Stream_Element_Offset (Count) - 1;
 
       case Status is
