@@ -65,23 +65,22 @@ private
 
    type Channels (Process : not null access Spawn.Internal.Process'Class) is
       record
-         Stdin_Parent    : Glib.IOChannel.Giochannel := null;
-         Stdin_Child     : Glib.Gint := -1;
-         Stdin_Event     : Glib.Main.G_Source_Id := Glib.Main.No_Source_Id;
-         Stdin_Lock      : Glib.Gboolean := 0;
+         Stdin_Parent  : Glib.IOChannel.Giochannel := null;
+         Stdin_Child   : Glib.Gint := -1;
+         Stdin_Event   : Glib.Main.G_Source_Id := Glib.Main.No_Source_Id;
+         Stdin_Lock    : Glib.Gboolean := 0;
 
-         Stdout_Parent   : Glib.IOChannel.Giochannel := null;
-         Stdout_Child    : Glib.Gint := -1;
-         Stdout_Event    : Glib.Main.G_Source_Id := Glib.Main.No_Source_Id;
-         Stdout_Lock     : Glib.Gboolean := 0;
+         Stdout_Parent : Glib.IOChannel.Giochannel := null;
+         Stdout_Child  : Glib.Gint := -1;
+         Stdout_Event  : Glib.Main.G_Source_Id := Glib.Main.No_Source_Id;
+         Stdout_Lock   : Glib.Gboolean := 0;
 
-         Stderr_Parent   : Glib.IOChannel.Giochannel := null;
-         Stderr_Child    : Glib.Gint := -1;
-         Stderr_Event    : Glib.Main.G_Source_Id := Glib.Main.No_Source_Id;
-         Stderr_Lock     : Glib.Gboolean := 0;
+         Stderr_Parent : Glib.IOChannel.Giochannel := null;
+         Stderr_Child  : Glib.Gint := -1;
+         Stderr_Event  : Glib.Main.G_Source_Id := Glib.Main.No_Source_Id;
+         Stderr_Lock   : Glib.Gboolean := 0;
 
-         PTY_Slave       : Glib.Gint := -1;
-         PTY_Channel     : Glib.IOChannel.Giochannel := null;
+         PTY_Slave     : Glib.Gint := -1;
       end record;
 
 end Spawn.Channels;
