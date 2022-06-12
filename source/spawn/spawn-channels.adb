@@ -273,9 +273,7 @@ package body Spawn.Channels is
       Count  : aliased Glib.Gsize := 0;
       Status : constant Glib.IOChannel.GIOStatus :=
         Glib.IOChannel.Read_Chars
-          (Self =>
-             (if Self.Stdout_Parent /= null
-                then Self.Stdout_Parent else Self.PTY_Channel),
+          (Self       => Self.Stdout_Parent,
            Buf        => Data,
            Bytes_Read => Count'Access,
            Error      => Error'Access);
@@ -328,6 +326,8 @@ package body Spawn.Channels is
          Success : in out Boolean);
 
       procedure Setup_PTY (Success : in out Boolean);
+
+      PTY_Channel : Glib.IOChannel.Giochannel := null;
 
       ----------------
       -- Setup_Pipe --
@@ -548,15 +548,15 @@ package body Spawn.Channels is
                Self.PTY_Slave := -1;
             end if;
 
-            if Self.PTY_Channel /= null then
-               Glib.IOChannel.Unref (Self.PTY_Channel);
-               Self.PTY_Channel := null;
+            if PTY_Channel /= null then
+               Glib.IOChannel.Unref (PTY_Channel);
+               PTY_Channel := null;
             end if;
          end Cleanup;
 
       begin
-         Self.PTY_Channel := null;
-         Self.PTY_Slave   := -1;
+         PTY_Channel    := null;
+         Self.PTY_Slave := -1;
 
          if not Success then
             return;
@@ -645,15 +645,15 @@ package body Spawn.Channels is
          --  Create GIOChannel and move ownership of the file descriptor to
          --  the channel
 
-         Self.PTY_Channel :=
+         PTY_Channel :=
            Glib.IOChannel.Giochannel_Unix_New (Glib.Gint (PTY_Master));
-         Glib.IOChannel.Set_Close_On_Unref (Self.PTY_Channel, True);
+         Glib.IOChannel.Set_Close_On_Unref (PTY_Channel, True);
          PTY_Master := -1;
 
          --  Setup non-blocking mode for the channel
 
          if Glib.IOChannel.Set_Flags
-           (Self.PTY_Channel,
+           (PTY_Channel,
             Glib.IOChannel.G_Io_Flag_Nonblock,
             Error'Access) /= Glib.IOChannel.G_Io_Status_Normal
          then
@@ -667,7 +667,7 @@ package body Spawn.Channels is
 
          --  Setup null encoding
 
-         if Glib.IOChannel.Set_Encoding (Self.PTY_Channel, "", Error'Access)
+         if Glib.IOChannel.Set_Encoding (PTY_Channel, "", Error'Access)
            /= Glib.IOChannel.G_Io_Status_Normal
          then
             Self.Process.Emit_Error_Occurred
@@ -680,7 +680,7 @@ package body Spawn.Channels is
 
          --  Disable buffering.
 
-         Glib.IOChannel.Set_Buffered (Self.PTY_Channel, False);
+         Glib.IOChannel.Set_Buffered (PTY_Channel, False);
       end Setup_PTY;
 
       Success : Boolean := True;
@@ -695,6 +695,9 @@ package body Spawn.Channels is
            (Self.Stdin_Child,
             Self.Stdin_Parent,
             Success);
+
+      else
+         Self.Stdin_Parent := Glib.IOChannel.Ref (PTY_Channel);
       end if;
 
       if not Standard_Output_PTY then
@@ -702,12 +705,19 @@ package body Spawn.Channels is
            (Self.Stdout_Parent,
             Self.Stdout_Child,
             Success);
+
+      else
+         Self.Stdout_Parent := Glib.IOChannel.Ref (PTY_Channel);
       end if;
 
       Setup_Pipe
         (Self.Stderr_Parent,
          Self.Stderr_Child,
          Success);
+
+      if PTY_Channel /= null then
+         Glib.IOChannel.Unref (PTY_Channel);
+      end if;
    end Setup_Channels;
 
    --------------
@@ -742,13 +752,6 @@ package body Spawn.Channels is
       Shutdown_Stdin (Self);
       Shutdown_Stdout (Self);
       Shutdown_Stderr (Self);
-
-      --  Shutdown PTY channel
-
-      if Self.PTY_Channel /= null then
-         Glib.IOChannel.Unref (Self.PTY_Channel);
-         Self.PTY_Channel := null;
-      end if;
    end Shutdown_Channels;
 
    ---------------------
@@ -800,8 +803,7 @@ package body Spawn.Channels is
    procedure Start_Stdin_Watch (Self : in out Channels) is
    begin
       Start_Watch
-        ((if Self.Stdin_Parent /= null
-           then Self.Stdin_Parent else Self.PTY_Channel),
+        (Self.Stdin_Parent,
          Self.Stdin_Event,
          Self.Stdin_Lock,
          Glib.IOChannel.G_Io_Out,
@@ -816,8 +818,7 @@ package body Spawn.Channels is
    procedure Start_Stdout_Watch (Self : in out Channels) is
    begin
       Start_Watch
-        ((if Self.Stdout_Parent /= null
-            then Self.Stdout_Parent else Self.PTY_Channel),
+        (Self.Stdout_Parent,
          Self.Stdout_Event,
          Self.Stdout_Lock,
          Glib.IOChannel.G_Io_In,
@@ -876,9 +877,7 @@ package body Spawn.Channels is
       Count  : aliased Glib.Gsize;
       Status : constant Glib.IOChannel.GIOStatus :=
         Glib.IOChannel.Write_Chars
-          (Self            =>
-             (if Self.Stdin_Parent /= null
-                then Self.Stdin_Parent else Self.PTY_Channel),
+          (Self          => Self.Stdin_Parent,
            Buf           => Data,
            Bytes_Written => Count'Access,
            Error         => Error'Access);

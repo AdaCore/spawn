@@ -178,6 +178,12 @@ package Spawn.Processes is
    --  listener associated to each Process.
 
    procedure Close_Standard_Input (Self : in out Process'Class);
+   --  Close standard input stream to the child process. Application can't
+   --  write information to the child process anymore.
+   --
+   --  Note, when PTY is used for more than one stream, underling connection
+   --  will be closed when all streams are closed.
+   --
    --  Do nothing if Self.Status /= Running
 
    procedure Write_Standard_Input
@@ -191,6 +197,12 @@ package Spawn.Processes is
    --  subprogram again for remaining data.
 
    procedure Close_Standard_Output (Self : in out Process'Class);
+   --  Close standard output stream to the child process. Application can't
+   --  read information from the child process anymore.
+   --
+   --  Note, when PTY is used for more than one stream, underling connection
+   --  will be closed when all streams are closed.
+   --
    --  Do nothing if Self.Status /= Running
 
    procedure Read_Standard_Output
