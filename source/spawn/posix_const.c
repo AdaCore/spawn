@@ -1,6 +1,7 @@
+#include <errno.h>
 #include <fcntl.h>
 #include <poll.h>
-#include <errno.h>
+#include <sys/ioctl.h>
 #include <sys/wait.h>
 
 #ifndef O_CLOEXEC
@@ -18,6 +19,7 @@ int SPAWN_F_SETFD = F_SETFD;
 int SPAWN_F_SETFL = F_SETFL;
 int SPAWN_EINTR = EINTR;
 int SPAWN_EAGAIN = EAGAIN;
+int SPAWN_TIOCSCTTY = TIOCSCTTY;
 unsigned short SPAWN_POLLIN = POLLIN;
 unsigned short SPAWN_POLLOUT = POLLOUT;
 
@@ -55,4 +57,9 @@ extern unsigned __spawn_WTERMSIG(int status)
 extern int __spawn_fcntli (int fd, int cmd, int arg)
 {
     return fcntl(fd, cmd, arg);
+}
+
+extern int __spawn_ioctli (int fd, int cmd, int arg)
+{
+    return ioctl(fd, cmd, arg);
 }

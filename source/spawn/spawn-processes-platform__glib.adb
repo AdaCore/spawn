@@ -37,7 +37,12 @@ package body Platform is
 
    function Spawn_Async_With_Fds is
      new Glib.Spawn.Generic_Spawn_Async_With_Fds
-       (User_Data => Integer);
+       (User_Data => Glib.Gint);
+
+   procedure Setup_Child_Process (Fd : access Glib.Gint)
+     with Convention => C;
+   --  Setup session and controlling terminal when pseudoterminal is used
+   --  for interprocess communication.
 
    --------------------------
    -- Close_Standard_Error --
@@ -108,6 +113,7 @@ package body Platform is
 
       Error  : aliased Glib.Error.GError;
       Status : Glib.Gboolean;
+      PTY    : aliased Glib.Gint;
 
    begin
       Self.Reference.Self := Self'Unchecked_Access;
@@ -115,14 +121,15 @@ package body Platform is
       Spawn.Channels.Setup_Channels
         (Self.Channels, Self.Use_PTY (Stdin), Self.Use_PTY (Stdout));
 
+      PTY := Spawn.Channels.PTY_Slave (Self.Channels);
       Status :=
         Spawn_Async_With_Fds
           (Working_Directory => dir,
            Argv              => argv'Access,
            Envp              => envp'Access,
            Flags             => Glib.Spawn.G_Spawn_Do_Not_Reap_Child,
-           Child_Setup       => null,
-           Data              => null,
+           Child_Setup       => Setup_Child_Process'Access,
+           Data              => PTY'Unchecked_Access,
            Child_Pid         => Self.pid'Access,
            Stdin_Fd          => Spawn.Channels.Child_Stdin (Self.Channels),
            Stdout_Fd         => Spawn.Channels.Child_Stdout (Self.Channels),
@@ -244,6 +251,25 @@ package body Platform is
    begin
       Spawn.Channels.Read_Stdout (Self.Channels, Data, Last);
    end Read_Standard_Output;
+
+   -------------------------
+   -- Setup_Child_Process --
+   -------------------------
+
+   procedure Setup_Child_Process (Fd : access Glib.Gint) is
+      use type Glib.Gint;
+
+      Ignore : Interfaces.C.int;
+      --  Any failures are ignored.
+
+   begin
+      if Fd.all /= -1 then
+         Ignore := Spawn.Posix.setsid;
+         Ignore :=
+           Spawn.Posix.ioctl
+             (Interfaces.C.int (Fd.all), Spawn.Posix.TIOCSCTTY, 0);
+      end if;
+   end Setup_Child_Process;
 
    -----------
    -- Start --

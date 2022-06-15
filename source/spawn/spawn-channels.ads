@@ -42,6 +42,8 @@ private package Spawn.Channels is
 
    function Child_Stderr (Self : Channels) return Glib.Gint;
 
+   function PTY_Slave (Self : Channels) return Glib.Gint;
+
    procedure Start_Watch (Self : in out Channels);
 
    procedure Write_Stdin

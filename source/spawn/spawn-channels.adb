@@ -208,6 +208,15 @@ package body Spawn.Channels is
       return Self.Stdout_Lock;
    end On_Stdout_Event;
 
+   ---------------
+   -- PTY_Slave --
+   ---------------
+
+   function PTY_Slave (Self : Channels) return Glib.Gint is
+   begin
+      return Self.PTY_Slave;
+   end PTY_Slave;
+
    -----------------
    -- Read_Stderr --
    -----------------
@@ -577,7 +586,8 @@ package body Spawn.Channels is
          --  Open pseudoterminal's master descriptor
 
          PTY_Master :=
-           Spawn.Posix.posix_openpt (Spawn.Posix.O_RDWR);
+           Spawn.Posix.posix_openpt
+             (Spawn.Posix.O_RDWR + Spawn.Posix.O_NOCTTY);
 
          if PTY_Master = -1 then
             Self.Process.Emit_Error_Occurred

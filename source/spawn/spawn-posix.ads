@@ -119,6 +119,15 @@ package Spawn.Posix is
    FD_CLOEXEC  : constant Interfaces.C.int
      with Import, Convention => C, External_Name => "SPAWN_FD_CLOEXEC";
 
+   function ioctl
+     (fd  : Interfaces.C.int;
+      cmd : Interfaces.C.int;
+      arg : Interfaces.C.int) return Interfaces.C.int
+     with Import, Convention => C, External_Name => "__spawn_ioctli";
+
+   TIOCSCTTY : constant Interfaces.C.int
+     with Import, Convention => C, External_Name => "SPAWN_TIOCSCTTY";
+
    subtype constrained_chars_ptr_array is
      Interfaces.C.Strings.chars_ptr_array (1 .. Interfaces.C.size_t'Last);
 
@@ -146,5 +155,8 @@ package Spawn.Posix is
       buf    : out Interfaces.C.char_array;
       buflen : Interfaces.C.size_t) return Interfaces.C.int
      with Import, Convention => C, External_Name => "ptsname_r";
+
+   function setsid return Interfaces.C.int
+     with Import, Convention => C, External_Name => "setsid";
 
 end Spawn.Posix;
