@@ -77,7 +77,9 @@ package body Spawn.Channels is
 
    function Child_Stderr (Self : Channels) return Glib.Gint is
    begin
-      return Self.Stderr_Child;
+      return
+        (if Self.Stderr_Child /= -1
+         then Self.Stderr_Child else Self.PTY_Slave);
    end Child_Stderr;
 
    -----------------
@@ -333,7 +335,8 @@ package body Spawn.Channels is
    procedure Setup_Channels
      (Self                : in out Channels;
       Standard_Input_PTY  : Boolean;
-      Standard_Output_PTY : Boolean)
+      Standard_Output_PTY : Boolean;
+      Standard_Error_PTY  : Boolean)
    is
 
       procedure Setup_Pipe
@@ -708,7 +711,10 @@ package body Spawn.Channels is
       Success : Boolean := True;
 
    begin
-      if Standard_Input_PTY or Standard_Output_PTY then
+      if Standard_Input_PTY
+        or Standard_Output_PTY
+        or Standard_Error_PTY
+      then
          Setup_PTY (Success);
       end if;
 
@@ -732,10 +738,15 @@ package body Spawn.Channels is
          Self.Stdout_Parent := Glib.IOChannel.Ref (PTY_Channel);
       end if;
 
-      Setup_Pipe
-        (Self.Stderr_Parent,
-         Self.Stderr_Child,
-         Success);
+      if not Standard_Error_PTY then
+         Setup_Pipe
+           (Self.Stderr_Parent,
+            Self.Stderr_Child,
+            Success);
+
+      else
+         Self.Stderr_Parent := Glib.IOChannel.Ref (PTY_Channel);
+      end if;
 
       if PTY_Channel /= null then
          Glib.IOChannel.Unref (PTY_Channel);
@@ -809,13 +820,15 @@ package body Spawn.Channels is
 
    procedure Start_Stderr_Watch (Self : in out Channels) is
    begin
-      Start_Watch
-        (Self.Stderr_Parent,
-         Self.Stderr_Event,
-         Self.Stderr_Lock,
-         Glib.IOChannel.G_Io_In,
-         On_Stderr_Event'Access,
-         Self.Process.Reference'Unchecked_Access);
+      if Self.Stderr_Parent /= Self.Stdout_Parent then
+         Start_Watch
+           (Self.Stderr_Parent,
+            Self.Stderr_Event,
+            Self.Stderr_Lock,
+            Glib.IOChannel.G_Io_In,
+            On_Stderr_Event'Access,
+            Self.Process.Reference'Unchecked_Access);
+      end if;
    end Start_Stderr_Watch;
 
    -----------------------

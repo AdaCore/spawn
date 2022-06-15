@@ -264,6 +264,15 @@ package body Spawn.Processes is
    end Set_Program;
 
    ----------------------------
+   -- Set_Standard_Error_PTY --
+   ----------------------------
+
+   procedure Set_Standard_Error_PTY (Self : in out Process'Class) is
+   begin
+      Self.Use_PTY (Stderr) := True;
+   end Set_Standard_Error_PTY;
+
+   ----------------------------
    -- Set_Standard_Input_PTY --
    ----------------------------
 
