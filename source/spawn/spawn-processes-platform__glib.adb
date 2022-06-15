@@ -119,7 +119,10 @@ package body Platform is
       Self.Reference.Self := Self'Unchecked_Access;
       Prepare_Arguments (argv);
       Spawn.Channels.Setup_Channels
-        (Self.Channels, Self.Use_PTY (Stdin), Self.Use_PTY (Stdout));
+        (Self.Channels,
+         Self.Use_PTY (Stdin),
+         Self.Use_PTY (Stdout),
+         Self.Use_PTY (Stderr));
 
       PTY := Spawn.Channels.PTY_Slave (Self.Channels);
       Status :=

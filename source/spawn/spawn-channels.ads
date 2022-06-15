@@ -24,7 +24,8 @@ private package Spawn.Channels is
    procedure Setup_Channels
      (Self                : in out Channels;
       Standard_Input_PTY  : Boolean;
-      Standard_Output_PTY : Boolean);
+      Standard_Output_PTY : Boolean;
+      Standard_Error_PTY  : Boolean);
 
    procedure Close_Child_Descriptors (Self : in out Channels);
 

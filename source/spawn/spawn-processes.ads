@@ -141,7 +141,15 @@ package Spawn.Processes is
 
    procedure Set_Standard_Output_PTY (Self : in out Process'Class);
    --  Configure standard output stream to use pseudo terminal instead
-   --  of pipe for communications.
+   --  of pipe for communications. Note, when both standard output and
+   --  standard error streams are configured to use pseudo terminals
+   --  they share single underling stream and reported as standard output.
+
+   procedure Set_Standard_Error_PTY (Self : in out Process'Class);
+   --  Configure standard error stream to use pseudo terminal instead
+   --  of pipe for communications. Note, when both standard output and
+   --  standard error streams are configured to use pseudo terminals
+   --  they share single underling stream and reported as standard output.
 
    procedure Start (Self : in out Process'Class)
      with Pre => Self.Status = Not_Running;
