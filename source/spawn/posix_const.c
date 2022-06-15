@@ -51,3 +51,8 @@ extern unsigned __spawn_WTERMSIG(int status)
 {
     return WTERMSIG(status);
 }
+
+extern int __spawn_fcntli (int fd, int cmd, int arg)
+{
+    return fcntl(fd, cmd, arg);
+}

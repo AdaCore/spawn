@@ -108,12 +108,8 @@ package Spawn.Posix is
    function fcntl
      (fd    : Interfaces.C.int;
       cmd   : Interfaces.C.int;
-      flags : Interfaces.C.int;
-      dummy : Interfaces.C.C_float := 0.0)
-        return Interfaces.C.int
-          with Import, Convention => C, External_Name => "fcntl";
-   --  An extra float argument is used to make this binding compatible
-   --  with amd64 ABI for C functions with ellipsis (...).
+      flags : Interfaces.C.int) return Interfaces.C.int
+     with Import, Convention => C, External_Name => "__spawn_fcntli";
 
    F_SETFD : constant Interfaces.C.int
      with Import, Convention => C, External_Name => "SPAWN_F_SETFD";
