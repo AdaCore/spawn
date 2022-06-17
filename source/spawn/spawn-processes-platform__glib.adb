@@ -163,6 +163,25 @@ package body Platform is
       Spawn.Channels.Start_Watch (Self.Channels);
    end Do_Start_Process;
 
+   --------------
+   -- Finalize --
+   --------------
+
+   procedure Finalize (Self : in out Process'Class) is
+      use type Glib.Main.G_Source_Id;
+
+   begin
+      Spawn.Channels.Shutdown_Channels (Self.Channels);
+
+      if Self.Event /= Glib.Main.No_Source_Id then
+         Glib.Main.Remove (Self.Event);
+         Self.Event := Glib.Main.No_Source_Id;
+      end if;
+
+      Glib.Spawn.Spawn_Close_Pid (Self.pid);
+      Self.pid := 0;
+   end Finalize;
+
    ------------------
    -- Kill_Process --
    ------------------
@@ -199,6 +218,7 @@ package body Platform is
    begin
       Glib.Spawn.Spawn_Close_Pid (pid);
 
+      Self.Event  := Glib.Main.No_Source_Id;
       Self.Status := Not_Running;
       Self.pid    := 0;
 

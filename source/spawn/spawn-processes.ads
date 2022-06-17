@@ -35,6 +35,8 @@ package Spawn.Processes is
    --
    --  Note: Make sure to keep Process object alive while it has Running
    --  state. The suggested pattern is to keep it in the listener object.
+   --  Finalization of the Process object in Running state result in wait
+   --  for termination of the child process or undefined behavior.
    --
    --  The running process has standard output and standard error streams to
    --  read from and standard input stream to write. Corresponding events

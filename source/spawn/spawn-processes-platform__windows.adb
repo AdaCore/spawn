@@ -39,6 +39,15 @@ package body Platform is
       Monitor.Enqueue ((Monitor.Close_Pipe, Self'Unchecked_Access, Stdout));
    end Close_Standard_Output;
 
+   --------------
+   -- Finalize --
+   --------------
+
+   procedure Finalize (Self : in out Process'Class) is
+   begin
+      raise Program_Error;
+   end Finalize;
+
    ------------------
    -- Kill_Process --
    ------------------
