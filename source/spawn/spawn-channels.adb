@@ -236,7 +236,7 @@ package body Spawn.Channels is
 
    begin
       Last := Data'First - 1;
-      --  Mark operation as failed. On success of the opration correspinding
+      --  Mark operation as failed. On success of the opration corresponding
       --  value is set.
 
       if Self.Stderr_Parent = null then
@@ -291,7 +291,7 @@ package body Spawn.Channels is
 
    begin
       Last := Data'First - 1;
-      --  Mark operation as failed. On success of the opration correspinding
+      --  Mark operation as failed. On success of the opration corresponding
       --  value is set.
 
       if Self.Stdout_Parent = null then
@@ -914,7 +914,7 @@ package body Spawn.Channels is
 
    begin
       Last := Data'First - 1;
-      --  Mark operation as failed. On success of the opration correspinding
+      --  Mark operation as failed. On success of the opration corresponding
       --  value is set.
 
       if Self.Stdout_Parent = null then
