@@ -225,6 +225,11 @@ package Spawn.Processes is
 
    procedure Close_Standard_Error (Self : in out Process'Class);
    --  Do nothing if Self.Status /= Running
+   --
+   --  Note, when PTY is used for more than one stream, underling connection
+   --  will be closed when all streams are closed.
+   --
+   --  Do nothing if Self.Status /= Running
 
    procedure Read_Standard_Error
      (Self : in out Process'Class;
