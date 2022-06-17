@@ -18,9 +18,6 @@ private package Spawn.Channels is
    type Channels (Process : not null access Spawn.Internal.Process'Class) is
      private;
 
-   type IO_Event_Callback is
-     access procedure (Self : in out Spawn.Internal.Process'Class);
-
    procedure Setup_Channels
      (Self                : in out Channels;
       Standard_Input_PTY  : Boolean;
