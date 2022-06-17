@@ -4,7 +4,12 @@
 --  SPDX-License-Identifier: Apache-2.0
 --
 
+pragma Warnings (Off);
+pragma Ada_2020;
 pragma Ada_2022;
+pragma Warnings (On);
+--  GNAT: different versions of compiler use different pragmas to enable
+--  Ada 2022 features.
 
 with Interfaces.C;
 pragma Warnings (Off, "internal GNAT unit");
