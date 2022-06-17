@@ -149,6 +149,15 @@ package body Platform is
       Windows.Do_Start_Process (Self, On_Start'Access);
    end Do_Start_Process;
 
+   --------------
+   -- Finalize --
+   --------------
+
+   procedure Finalize (Self : in out Process'Class) is
+   begin
+      raise Program_Error;
+   end Finalize;
+
    ------------------
    -- Kill_Process --
    ------------------

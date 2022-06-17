@@ -56,6 +56,15 @@ package body Platform is
       return Interfaces.C.int (GNAT.OS_Lib.Errno);
    end Errno;
 
+   --------------
+   -- Finalize --
+   --------------
+
+   procedure Finalize (Self : in out Process'Class) is
+   begin
+      raise Program_Error;
+   end Finalize;
+
    ------------------
    -- Kill_Process --
    ------------------
