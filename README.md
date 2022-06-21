@@ -2,6 +2,7 @@ Ada Process API _(spawn)_
 =========================================
 
 [![Build](https://github.com/AdaCore/spawn/workflows/Build/badge.svg)](https://github.com/AdaCore/spawn/actions)
+[![Alire](https://img.shields.io/endpoint?url=https://alire.ada.dev/badges/spawn.json)](https://alire.ada.dev/crates/spawn.html)
 
 This library provides simple API to spawn processes and communicate with them.
 We provide two implementations of the same API - the integrated into Glib event loop and
@@ -12,11 +13,19 @@ the independent.
 ### Using alire
 Run `alr get --build spawn` or `alr get --build spawn_glib`.
 
+Also you can build from the cloned repository directory with
+
+    alr build
+
+For `spawn_glib` do this in `packages/glib` subdirectory:
+
+    cd packages/glib
+    alr build
+
 ### Build from sources
-Run
-```
-make all install PREFIX=/path/to/install
-```
+Clone repository or unpack source archive, then run
+
+    make all install PREFIX=/path/to/install
 
 ## Usage
  1. Add `with "spawn";` or `with "spawn_glib";` to your project file.
@@ -37,7 +46,7 @@ make all install PREFIX=/path/to/install
     ```ada
     P.Start;
     ```
- 6. (Glib independent) With no event loop integration you should drive it
+ 6. (Glib independent case) With no event loop integration you should drive it
     by you-self periodically calling
     ```ada
     Spawn.Processes.Monitor_Loop (1);
@@ -65,6 +74,5 @@ or submit PRs.
 
 ## License
 
-[GPL](COPYING3) with [GCC RTL Exception](COPYING.RUNTIME)
-© [AdaCore](https://github.com/AdaCore/)
+[Apache-2.0](LICENSE) © [AdaCore](https://github.com/AdaCore/)
 

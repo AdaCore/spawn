@@ -1,0 +1,26 @@
+name = "spawn_glib"
+description = "A simple library to spawn processes and communicate with them."
+long-description = "This is Glib integrated implementation of a spawn processes interface."
+version = "23.0.0-git"
+website = "https://github.com/reznikmm/spawn"
+authors = ["AdaCore", "Max Reznik"]
+licenses = "Apache-2.0"
+maintainers = ["Vadim Godunko <vgodunko@gmail.com>", "Max Reznik <reznikmm@gmail.com>"]
+maintainers-logins = ["godunko", "reznikmm"]
+project-files = ["../../gnat/spawn_glib.gpr"]
+tags = ["process", "launch", "pipe", "glib"]
+
+[configuration]
+disabled = true
+
+[[depends-on]]
+gtkada = "^19"  # GtkAda 2019 and latter
+
+[gpr-externals]
+OS = ["unix", "osx", "Windows_NT"]
+
+[gpr-set-externals.'case(os)']
+linux   = { OS = "unix" } # Compact table syntax is convenient in this case
+windows = { OS = "Windows_NT" }  # to see all enumeration values, one per row.
+macos   = { OS = "osx" }
+
