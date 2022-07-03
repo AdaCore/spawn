@@ -298,6 +298,66 @@ package body Spawn.Processes is
    end Terminate_Process;
 
    -----------------------
+   -- Wait_For_Finished --
+   -----------------------
+
+   function Wait_For_Finished
+     (Self    : in out Process'Class;
+      Timeout : Duration := Duration'Last) return Boolean is
+   begin
+      raise Program_Error;
+      return False;
+   end Wait_For_Finished;
+
+   ---------------------------------------
+   -- Wait_For_Standard_Error_Available --
+   ---------------------------------------
+
+   function Wait_For_Standard_Error_Available
+     (Self    : in out Process'Class;
+      Timeout : Duration := Duration'Last) return Boolean is
+   begin
+      raise Program_Error;
+      return False;
+   end Wait_For_Standard_Error_Available;
+
+   ---------------------------------------
+   -- Wait_For_Standard_Input_Available --
+   ---------------------------------------
+
+   function Wait_For_Standard_Input_Available
+     (Self    : in out Process'Class;
+      Timeout : Duration := Duration'Last) return Boolean is
+   begin
+      raise Program_Error;
+      return False;
+   end Wait_For_Standard_Input_Available;
+
+   ----------------------------------------
+   -- Wait_For_Standard_Output_Available --
+   ----------------------------------------
+
+   function Wait_For_Standard_Output_Available
+     (Self    : in out Process'Class;
+      Timeout : Duration := Duration'Last) return Boolean is
+   begin
+      raise Program_Error;
+      return False;
+   end Wait_For_Standard_Output_Available;
+
+   ----------------------
+   -- Wait_For_Started --
+   ----------------------
+
+   function Wait_For_Started
+     (Self    : in out Process'Class;
+      Timeout : Duration := Duration'Last) return Boolean is
+   begin
+      raise Program_Error;
+      return False;
+   end Wait_For_Started;
+
+   -----------------------
    -- Working_Directory --
    -----------------------
 

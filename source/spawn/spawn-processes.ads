@@ -204,6 +204,48 @@ package Spawn.Processes is
    --  data was read, the Standard_Error_Available notification will be
    --  emitted later.
 
+   function Wait_For_Started
+     (Self    : in out Process'Class;
+      Timeout : Duration := Duration'Last) return Boolean;
+   --  Block until process has started or until Timeout have passed. Return
+   --  True when process has been started successfully.
+   --
+   --  Started subprogram of the listener is called before exit from this
+   --  subprogram.
+
+   function Wait_For_Finished
+     (Self    : in out Process'Class;
+      Timeout : Duration := Duration'Last) return Boolean;
+   --  Block until process has been finished ot until Timeout have passed.
+   --  Return True when process has finished.
+   --
+   --  Finished subprogram of the listener is called before exit from this
+   --  subprogram.
+
+   function Wait_For_Standard_Input_Available
+     (Self    : in out Process'Class;
+      Timeout : Duration := Duration'Last) return Boolean;
+   --  Block until standard input is available for write.
+   --
+   --  Standard_Input_Available subprogram of the listener is called before
+   --  exit from this subprogram.
+
+   function Wait_For_Standard_Output_Available
+     (Self    : in out Process'Class;
+      Timeout : Duration := Duration'Last) return Boolean;
+   --  Block until standard output has data available for read.
+   --
+   --  Standard_Output_Available subprogram of the listener is called before
+   --  exit from this subprogram.
+
+   function Wait_For_Standard_Error_Available
+     (Self    : in out Process'Class;
+      Timeout : Duration := Duration'Last) return Boolean;
+   --  Block until standard error has data available for read.
+   --
+   --  Standard_Error_Available subprogram of the listener is called before
+   --  exit from this subprogram.
+
 private
 
    use all type Internal.Pipe_Kinds;
