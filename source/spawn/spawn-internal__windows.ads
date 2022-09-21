@@ -69,4 +69,6 @@ package Spawn.Internal is
      (Self          : in out Process;
       Process_Error : Integer) is abstract;
 
+   procedure On_Close_Channels (Self : in out Process) is null;
+
 end Spawn.Internal;

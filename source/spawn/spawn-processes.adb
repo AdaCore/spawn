@@ -189,6 +189,25 @@ package body Spawn.Processes is
 
    package body Platform is separate;
 
+   -----------------------
+   -- On_Close_Channels --
+   -----------------------
+
+   overriding procedure On_Close_Channels (Self : in out Process) is
+   begin
+      if Self.Pending_Finish then
+         Self.Pending_Finish := False;
+
+         begin
+            Self.Listener.Finished (Self.Exit_Status, Self.Exit_Code);
+
+         exception
+            when others =>
+               null;
+         end;
+      end if;
+   end On_Close_Channels;
+
    -------------
    -- Program --
    -------------
