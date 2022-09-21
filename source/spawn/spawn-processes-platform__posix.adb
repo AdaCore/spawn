@@ -60,9 +60,15 @@ package body Platform is
    -- Finalize --
    --------------
 
-   procedure Finalize (Self : in out Process'Class) is
+   procedure Finalize
+     (Self   : in out Process'Class;
+      Status : Process_Status)
+   is
+      pragma Unreferenced (Self);
    begin
-      raise Program_Error;
+      if Status = Running then
+         raise Program_Error;
+      end if;
    end Finalize;
 
    ------------------

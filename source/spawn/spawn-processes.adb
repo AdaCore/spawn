@@ -14,7 +14,9 @@ package body Spawn.Processes is
 
       procedure Close_Standard_Output (Self : in out Process'Class);
 
-      procedure Finalize (Self : in out Process'Class);
+      procedure Finalize
+        (Self   : in out Process'Class;
+         Status : Process_Status);
 
       procedure Kill_Process (Self : in out Process'Class);
 
@@ -160,7 +162,7 @@ package body Spawn.Processes is
 
    overriding procedure Finalize (Self : in out Process) is
    begin
-      Platform.Finalize (Self);
+      Platform.Finalize (Self, Self.Status);
    end Finalize;
 
    ------------------

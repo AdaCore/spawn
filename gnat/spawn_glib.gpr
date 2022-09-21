@@ -54,7 +54,9 @@ library project Spawn_Glib is
       when "Windows_NT" =>
          for Excluded_Source_Files use Common_Excluded &
            ("spawn-channels.ads",
-            "spawn-channels.adb");
+            "spawn-channels.adb",
+            "pipe2.c",
+            "posix_const.c");
    end case;
 
    Ada_Switches := ();
