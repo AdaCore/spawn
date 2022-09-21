@@ -261,6 +261,10 @@ private
       Program     : Ada.Strings.Unbounded.Unbounded_String;
       Directory   : Ada.Strings.Unbounded.Unbounded_String;
       Use_PTY     : Pipe_Flags := (others => False);
+
+      Pending_Finish : Boolean := False;
+      --  We have got pid closed but channels are still active.
+      --  In this case delay Finished callback until channels are closed.
    end record;
 
    overriding procedure Finalize (Self : in out Process);
@@ -274,5 +278,7 @@ private
    overriding procedure Emit_Error_Occurred
      (Self  : in out Process;
       Error : Integer);
+
+   overriding procedure On_Close_Channels (Self : in out Process);
 
 end Spawn.Processes;

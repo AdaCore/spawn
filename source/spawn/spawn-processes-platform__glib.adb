@@ -236,6 +236,12 @@ package body Platform is
          Self.Exit_Code   := Process_Exit_Code (Glib.Error.Get_Code (Error));
       end if;
 
+      if Spawn.Channels.Is_Active (Self.Channels) then
+         Self.Pending_Finish := True;
+         return;
+
+      end if;
+
       begin
          Self.Listener.Finished (Self.Exit_Status, Self.Exit_Code);
 
