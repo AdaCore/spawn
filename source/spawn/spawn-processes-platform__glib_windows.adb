@@ -153,9 +153,23 @@ package body Platform is
    -- Finalize --
    --------------
 
-   procedure Finalize (Self : in out Process'Class) is
+   procedure Finalize
+     (Self   : in out Process'Class;
+      Status : Process_Status)
+   is
+      pragma Unreferenced (Status);
+      use type Glib.Main.G_Source_Id;
+
    begin
-      raise Program_Error;
+      --  Close stdio pipes
+      for J in Self.pipe'Range loop
+         Windows.Do_Close_Pipe (Self, J);
+      end loop;
+
+      if Self.Event /= Glib.Main.No_Source_Id then
+         Glib.Main.Remove (Self.Event);
+         Self.Event := Glib.Main.No_Source_Id;
+      end if;
    end Finalize;
 
    ------------------
@@ -180,6 +194,7 @@ package body Platform is
 
       Process : constant Process_Access := Process_Access (data.Self);
    begin
+      Process.Event := Glib.Main.No_Source_Id;
       Windows.On_Process_Died (Process.all);
    end My_Death_Collback;
 
