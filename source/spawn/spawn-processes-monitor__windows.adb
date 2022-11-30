@@ -128,6 +128,15 @@ package body Spawn.Processes.Monitor is
       procedure Wait_Process_Death (Timeout : Integer) is
          use type Windows_API.DWORD;
 
+         procedure Swap (Left, Right : in out Windows_API.HANDLE);
+
+         procedure Swap (Left, Right : in out Windows_API.HANDLE) is
+            Copy : constant Windows_API.HANDLE := Left;
+         begin
+            Left := Right;
+            Right := Copy;
+         end Swap;
+
          Result    : Windows_API.DWORD;
          Index     : Integer;
          Process   : Process_Access;
@@ -154,8 +163,12 @@ package body Spawn.Processes.Monitor is
             --  Wake up event triggered
             return;
          elsif Index <= Last then
-            --  Some process died
+            --  Some process died, drop it from fds and List
             Process := List (Index);
+            Swap (fds (Index), fds (Last));
+            List.Swap (Index, Last);
+            List.Delete_Last;
+            Last := Last - 1;
             Windows.On_Process_Died (Process.all);
          else
             raise Program_Error with "WaitForMultipleObjectsEx FAILED";
