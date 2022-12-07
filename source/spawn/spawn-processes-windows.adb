@@ -542,11 +542,7 @@ package body Spawn.Processes.Windows is
          Directory : constant String :=
            Ada.Strings.Unbounded.To_String (Self.Directory);
       begin
-         if Directory = "" then
-            return ".";
-         else
-            return Directory;
-         end if;
+         return (if Directory = "" then "." else Directory);
       end Work_Directory;
 
       Start : aliased Windows_API.STARTUPINFOW :=
@@ -794,19 +790,18 @@ package body Spawn.Processes.Windows is
          --
          --  'S" is severity of HRESULT, 2#1# means failure.
 
-         if Exit_Code = Windows_API.DWORD (Terminate_Code)
-           --  Process terminated by call to TerminateProcess
-           or else (Exit_Code and 16#F000_0000#) = 16#D000_0000#
-           --  NTSTATUS converted into HRESULT with STATUS_SERVERITY_ERROR
-           --  (bits 28, 30 and 31 are set to '1', and bit 29 are set to '0')
-           or else (Exit_Code and 16#B000_0000#) = 16#8000_0000#
-           --  HRESULT with failure severity
-         then
-            Self.Exit_Status := Crash;
+         Self.Exit_Status :=
+           (if
+              Exit_Code = Windows_API.DWORD (Terminate_Code)
+         --  Process terminated by call to TerminateProcess
 
-         else
-            Self.Exit_Status := Normal;
-         end if;
+              or else (Exit_Code and 16#F000_0000#) = 16#D000_0000#
+         --  NTSTATUS converted into HRESULT with STATUS_SERVERITY_ERROR
+         --  (bits 28, 30 and 31 are set to '1', and bit 29 are set to '0')
+
+              or else (Exit_Code and 16#B000_0000#) = 16#8000_0000#
+            then Crash
+            else Normal);
 
          Self.Exit_Code := Process_Exit_Code (Exit_Code);
          Self.Status := Not_Running;

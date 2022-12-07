@@ -111,11 +111,7 @@ package body Spawn.Environments is
    is
       Value : constant UTF_8_String := Self.Value (Name);
    begin
-      if Value = "" then
-         return "";
-      else
-         return Search_In_Path (File, Value);
-      end if;
+      return (if Value = "" then "" else Search_In_Path (File, Value));
    end Search_Path;
 
    ------------------------
@@ -139,11 +135,10 @@ package body Spawn.Environments is
    is
       Cursor : constant UTF_8_String_Maps.Cursor := Self.Map.Find (Name);
    begin
-      if UTF_8_String_Maps.Has_Element (Cursor) then
-         return UTF_8_String_Maps.Element (Cursor);
-      else
-         return Default;
-      end if;
+      return
+        (if UTF_8_String_Maps.Has_Element (Cursor) then
+           UTF_8_String_Maps.Element (Cursor)
+         else Default);
    end Value;
 
 begin

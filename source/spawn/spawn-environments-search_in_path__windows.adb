@@ -36,14 +36,9 @@ is
         lpBuffer      => Buffer (Buffer'First)'Unchecked_Access,
         lpFilePart    => null);
 begin
-   if Length = 0 or else Length > Buffer'Length then
-
-      return "";
-   else
-
-      return Ada.Strings.UTF_Encoding.Wide_Strings.Encode
-        (Interfaces.C.To_Ada
-           (Buffer (1 .. Interfaces.C.size_t (Length)),
-            Trim_Nul => False));
-   end if;
+   return
+     (if Length = 0 or else Length > Buffer'Length then ""
+      else Ada.Strings.UTF_Encoding.Wide_Strings.Encode
+          (Interfaces.C.To_Ada
+             (Buffer (1 .. Interfaces.C.size_t (Length)), Trim_Nul => False)));
 end Search_In_Path;
