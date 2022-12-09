@@ -1,5 +1,5 @@
 --
---  Copyright (C) 2018-2020, AdaCore
+--  Copyright (C) 2018-2022, AdaCore
 --
 --  SPDX-License-Identifier: Apache-2.0
 --
@@ -13,17 +13,18 @@ pragma Warnings (Off);
 with System.Win32;
 pragma Warnings (On);
 
-with Spawn.Processes.Windows;
 with Spawn.Windows_API;
+with Spawn.Internal.Windows;
 
-package body Spawn.Processes.Monitor is
+package body Spawn.Internal.Monitor is
+   use all type Spawn.Common.Pipe_Kinds;
 
    subtype Context is Internal.Context;
    subtype Stream_Element_Buffer is Internal.Stream_Element_Buffer;
 
-   type Process_Access is access all Processes.Process'Class;
+   type Process_Access is access all Process'Class;
 
-   procedure Start_Process (Self : access Processes.Process'Class);
+   procedure Start_Process (Self : access Process'Class);
 
    package Command_Queue_Interfaces is
      new Ada.Containers.Synchronized_Queue_Interfaces (Command);
@@ -54,7 +55,7 @@ package body Spawn.Processes.Monitor is
 
    procedure Do_Watch_Pipe
      (Process : not null Process_Access;
-      Kind    : Standard_Pipe);
+      Kind    : Spawn.Common.Standard_Pipe);
 
    Callback : constant array (Stdout .. Stderr) of Read_Write_Ex.Callback :=
      (Standard_Output_Callback'Access,
@@ -197,7 +198,7 @@ package body Spawn.Processes.Monitor is
 
    procedure Do_Watch_Pipe
      (Process : not null Process_Access;
-      Kind    : Standard_Pipe)
+      Kind    : Spawn.Common.Standard_Pipe)
    is
       use type Ada.Streams.Stream_Element_Count;
       use type Windows_API.BOOL;
@@ -315,7 +316,7 @@ package body Spawn.Processes.Monitor is
    -- Start_Process --
    -------------------
 
-   procedure Start_Process (Self : access Processes.Process'Class) is
+   procedure Start_Process (Self : access Process'Class) is
       procedure On_Start;
 
       procedure On_Start is
@@ -326,4 +327,4 @@ package body Spawn.Processes.Monitor is
       Windows.Do_Start_Process (Self.all, On_Start'Access);
    end Start_Process;
 
-end Spawn.Processes.Monitor;
+end Spawn.Internal.Monitor;

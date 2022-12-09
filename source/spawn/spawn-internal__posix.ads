@@ -4,8 +4,12 @@
 --  SPDX-License-Identifier: Apache-2.0
 --
 
-with Ada.Finalization;
+--  Process implementation for POSIX without Glib integration.
+
+with Ada.Streams;
 with Interfaces.C;
+
+with Spawn.Common;
 
 private package Spawn.Internal is
 
@@ -16,7 +20,10 @@ private package Spawn.Internal is
 
    end Environments;
 
-   type Pipe_Kinds is (Stdin, Stdout, Stderr, Launch);
+   procedure Loop_Cycle (Timeout : Integer);
+   --  See Spawn.Internal.Monitor
+
+   subtype Pipe_Kinds is Spawn.Common.Pipe_Kinds;
 
    type Pipe_Array is array (Pipe_Kinds) of Interfaces.C.int;
    --  File descriptors array
@@ -24,23 +31,50 @@ private package Spawn.Internal is
    type Index_Array is array (Pipe_Kinds) of Natural;
    --  Index in poll for each descriptors array
 
-   type Process is
-     abstract new Ada.Finalization.Limited_Controlled with record
+   type Process is new Spawn.Common.Process with record
       pid   : Interfaces.C.int := 0;
       pipe  : Pipe_Array := (others => 0);
       Index : Index_Array := (others => 0);
    end record;
+   --  Process implementation type provides the same interface as
+   --  Spawn.Processes.Process type.
 
-   procedure Emit_Stdin_Available (Self : in out Process) is abstract;
+   overriding procedure Finalize (Self : in out Process);
 
-   procedure Emit_Stdout_Available (Self : in out Process) is abstract;
+   procedure Start (Self : in out Process'Class);
+   --  See documentation in Spawn.Processes.
 
-   procedure Emit_Stderr_Available (Self : in out Process) is abstract;
+   procedure Terminate_Process (Self : in out Process'Class);
+   --  See documentation in Spawn.Processes.
 
-   procedure Emit_Error_Occurred
-     (Self          : in out Process;
-      Process_Error : Integer) is abstract;
+   procedure Kill_Process (Self : in out Process'Class);
+   --  See documentation in Spawn.Processes.
 
-   procedure On_Close_Channels (Self : in out Process) is null;
+   procedure Close_Standard_Input (Self : in out Process'Class);
+   --  See documentation in Spawn.Processes.
+
+   procedure Write_Standard_Input
+     (Self : in out Process'Class;
+      Data : Ada.Streams.Stream_Element_Array;
+      Last : out Ada.Streams.Stream_Element_Offset);
+   --  See documentation in Spawn.Processes.
+
+   procedure Close_Standard_Output (Self : in out Process'Class);
+   --  See documentation in Spawn.Processes.
+
+   procedure Read_Standard_Output
+     (Self : in out Process'Class;
+      Data : out Ada.Streams.Stream_Element_Array;
+      Last : out Ada.Streams.Stream_Element_Offset);
+   --  See documentation in Spawn.Processes.
+
+   procedure Close_Standard_Error (Self : in out Process'Class);
+   --  See documentation in Spawn.Processes.
+
+   procedure Read_Standard_Error
+     (Self : in out Process'Class;
+      Data : out Ada.Streams.Stream_Element_Array;
+      Last : out Ada.Streams.Stream_Element_Offset);
+   --  See documentation in Spawn.Processes.
 
 end Spawn.Internal;

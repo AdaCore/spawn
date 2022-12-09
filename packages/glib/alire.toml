@@ -14,7 +14,7 @@ tags = ["process", "launch", "pipe", "glib"]
 disabled = true
 
 [[depends-on]]
-gtkada = "^19"  # GtkAda 2019 and latter
+gtkada = "^23"  # GtkAda 23 and latter
 
 [gpr-externals]
 OS = ["unix", "osx", "Windows_NT"]

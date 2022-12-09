@@ -1,5 +1,5 @@
 --
---  Copyright (C) 2018-2020, AdaCore
+--  Copyright (C) 2018-2022, AdaCore
 --
 --  SPDX-License-Identifier: Apache-2.0
 --
@@ -16,7 +16,7 @@ pragma Warnings (Off);
 with System.OS_Interface;
 pragma Warnings (Off);
 
-separate (Spawn.Processes.Monitor)
+separate (Spawn.Internal.Monitor)
 procedure Initialize is
    Ignore : Interfaces.C.int;
    Value  : aliased System.OS_Interface.struct_sigaction :=

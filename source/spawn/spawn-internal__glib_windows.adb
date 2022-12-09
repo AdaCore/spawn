@@ -4,22 +4,53 @@
 --  SPDX-License-Identifier: Apache-2.0
 --
 
-with Glib.Main;
-with Glib.Spawn;
+with Ada.Strings.UTF_Encoding.Wide_Strings;
+with Ada.Wide_Characters.Unicode;
 
-with Spawn.Processes.Windows;
+with Spawn.Internal.Windows;
 
-with Spawn.Windows_API;
-pragma Warnings (Off);
-with System.Win32;
-pragma Warnings (On);
+package body Spawn.Internal is
+   use type Ada.Streams.Stream_Element_Offset;
+   use all type Spawn.Common.Pipe_Kinds;
 
-separate (Spawn.Processes)
-package body Platform is
+   package body Environments is
 
-   subtype Context is Internal.Context;
+      ---------
+      -- "=" --
+      ---------
 
-   type Process_Access is access all Processes.Process'Class;
+      function "=" (Left, Right : UTF_8_String) return Boolean is
+      begin
+         return To_Key (Left) = To_Key (Right);
+      end "=";
+
+      ---------
+      -- "<" --
+      ---------
+
+      function "<" (Left, Right : UTF_8_String) return Boolean is
+      begin
+         return To_Key (Left) < To_Key (Right);
+      end "<";
+
+      ------------
+      -- To_Key --
+      ------------
+
+      function To_Key (Text : UTF_8_String) return Wide_String is
+         Value : Wide_String :=
+           Ada.Strings.UTF_Encoding.Wide_Strings.Decode (Text);
+      begin
+         for Char of Value loop
+            Char := Ada.Wide_Characters.Unicode.To_Upper_Case (Char);
+         end loop;
+
+         return Value;
+      end To_Key;
+
+   end Environments;
+
+   type Process_Access is access all Process'Class;
 
    procedure Do_Start_Process (Self : aliased in out Process'Class);
 
@@ -27,7 +58,7 @@ package body Platform is
      (Self : in out Process'Class;
       Data : out Ada.Streams.Stream_Element_Array;
       Last : out Ada.Streams.Stream_Element_Offset;
-      Kind : Standard_Pipe);
+      Kind : Spawn.Common.Standard_Pipe);
 
    function Child_Watch is new Glib.Main.Generic_Child_Add_Watch
      (User_Data => Internal.Process_Reference);
@@ -98,7 +129,7 @@ package body Platform is
      (Self : in out Process'Class;
       Data : out Ada.Streams.Stream_Element_Array;
       Last : out Ada.Streams.Stream_Element_Offset;
-      Kind : Standard_Pipe)
+      Kind : Spawn.Common.Standard_Pipe)
    is
       procedure On_No_Data;
 
@@ -153,11 +184,7 @@ package body Platform is
    -- Finalize --
    --------------
 
-   procedure Finalize
-     (Self   : in out Process'Class;
-      Status : Process_Status)
-   is
-      pragma Unreferenced (Status);
+   overriding procedure Finalize (Self : in out Process) is
       use type Glib.Main.G_Source_Id;
 
    begin
@@ -328,4 +355,4 @@ package body Platform is
       Windows.Do_Write (Self, Data, Last, On_No_Data'Access);
    end Write_Standard_Input;
 
-end Platform;
+end Spawn.Internal;

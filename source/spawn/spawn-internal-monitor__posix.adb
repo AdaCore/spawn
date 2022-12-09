@@ -1,5 +1,5 @@
 --
---  Copyright (C) 2018-2021, AdaCore
+--  Copyright (C) 2018-2022, AdaCore
 --
 --  SPDX-License-Identifier: Apache-2.0
 --
@@ -9,16 +9,21 @@ with Ada.Containers.Synchronized_Queue_Interfaces;
 with Ada.Containers.Unbounded_Synchronized_Queues;
 with Ada.Containers.Vectors;
 with Ada.Interrupts.Names;
+with Ada.Strings.Unbounded;
 with Ada.Unchecked_Deallocation;
+
+with Interfaces.C.Strings;
 
 with GNAT.OS_Lib;
 
-with Spawn.Posix;
 with Spawn.Environments.Internal;
-with Interfaces.C.Strings;
+with Spawn.Posix;
+with Spawn.Process_Listeners;
 
-package body Spawn.Processes.Monitor is
+package body Spawn.Internal.Monitor is
    use type Interfaces.C.int;
+   use type Spawn.Process_Listeners.Process_Listener_Access;
+   use all type Pipe_Kinds;
 
    type Process_Access is access all Process'Class;
 
@@ -26,7 +31,7 @@ package body Spawn.Processes.Monitor is
 
    procedure Do_Close_Pipe
      (Self : Process_Access;
-      Kind : Standard_Pipe);
+      Kind : Common.Standard_Pipe);
 
    procedure My_IO_Callback
      (Process : Process_Access;
@@ -97,7 +102,7 @@ package body Spawn.Processes.Monitor is
 
       procedure Watch_Pipe
         (Self : Process_Access;
-         Kind : Standard_Pipe);
+         Kind : Common.Standard_Pipe);
 
       procedure Wait
         (Timeout     : Interfaces.C.int;
@@ -321,9 +326,9 @@ package body Spawn.Processes.Monitor is
 
       procedure Watch_Pipe
         (Self : Process_Access;
-         Kind : Standard_Pipe)
+         Kind : Common.Standard_Pipe)
       is
-         Event_Map : constant array (Standard_Pipe) of
+         Event_Map : constant array (Common.Standard_Pipe) of
            Interfaces.C.unsigned_short :=
              (Stdin => Posix.POLLOUT,
               others => Posix.POLLIN);
@@ -424,7 +429,7 @@ package body Spawn.Processes.Monitor is
 
    procedure Do_Close_Pipe
      (Self : Process_Access;
-      Kind : Standard_Pipe)
+      Kind : Common.Standard_Pipe)
    is
       Ignore : Interfaces.C.int := Posix.close (Self.pipe (Kind));
    begin
@@ -588,8 +593,7 @@ package body Spawn.Processes.Monitor is
 
       procedure Prepare_Arguments (argv : out Posix.chars_ptr_array) is
       begin
-         argv (0) := Interfaces.C.Strings.New_String
-           (To_String (Self.Program));
+         argv (0) := Interfaces.C.Strings.New_String (Self.Program);
 
          for J in 1 .. Self.Arguments.Last_Index loop
             argv (J) := Interfaces.C.Strings.New_String
@@ -697,7 +701,7 @@ package body Spawn.Processes.Monitor is
       end if;
 
       --  Make stdio non-blocking
-      if (for some X in Standard_Pipe =>
+      if (for some X in Common.Standard_Pipe =>
             Posix.fcntl
               (std (X) (Parent_Ends (X)),
                Posix.F_SETFL,
@@ -728,4 +732,4 @@ package body Spawn.Processes.Monitor is
 
 begin
    Initialize;
-end Spawn.Processes.Monitor;
+end Spawn.Internal.Monitor;

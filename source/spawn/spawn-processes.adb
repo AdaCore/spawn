@@ -6,164 +6,32 @@
 
 package body Spawn.Processes is
 
-   package Platform is
-
-      procedure Close_Standard_Error (Self : in out Process'Class);
-
-      procedure Close_Standard_Input (Self : in out Process'Class);
-
-      procedure Close_Standard_Output (Self : in out Process'Class);
-
-      procedure Finalize
-        (Self   : in out Process'Class;
-         Status : Process_Status);
-
-      procedure Kill_Process (Self : in out Process'Class);
-
-      procedure Read_Standard_Error
-        (Self : in out Process'Class;
-         Data : out Ada.Streams.Stream_Element_Array;
-         Last : out Ada.Streams.Stream_Element_Offset);
-
-      procedure Read_Standard_Output
-        (Self : in out Process'Class;
-         Data : out Ada.Streams.Stream_Element_Array;
-         Last : out Ada.Streams.Stream_Element_Offset);
-
-      procedure Start (Self : in out Process'Class);
-
-      procedure Terminate_Process (Self : in out Process'Class);
-
-      procedure Write_Standard_Input
-        (Self : in out Process'Class;
-         Data : Ada.Streams.Stream_Element_Array;
-         Last : out Ada.Streams.Stream_Element_Offset);
-
-   end Platform;
-
-   ---------------
-   -- Arguments --
-   ---------------
-
-   function Arguments
-     (Self : Process'Class)
-      return Spawn.String_Vectors.UTF_8_String_Vector is
-   begin
-      return Self.Arguments;
-   end Arguments;
-
    --------------------------
    -- Close_Standard_Error --
    --------------------------
 
-   procedure Close_Standard_Error (Self : in out Process'Class)
-     renames Platform.Close_Standard_Error;
+   procedure Close_Standard_Error (Self : in out Process'Class) is
+   begin
+      Self.Interal.Close_Standard_Error;
+   end Close_Standard_Error;
 
    --------------------------
    -- Close_Standard_Input --
    --------------------------
 
-   procedure Close_Standard_Input (Self : in out Process'Class)
-     renames Platform.Close_Standard_Input;
+   procedure Close_Standard_Input (Self : in out Process'Class) is
+   begin
+      Self.Interal.Close_Standard_Input;
+   end Close_Standard_Input;
 
    ---------------------------
    -- Close_Standard_Output --
    ---------------------------
 
-   procedure Close_Standard_Output (Self : in out Process'Class)
-     renames Platform.Close_Standard_Output;
-
-   -------------------------
-   -- Emit_Error_Occurred --
-   -------------------------
-
-   overriding procedure Emit_Error_Occurred
-     (Self  : in out Process;
-      Error : Integer) is
+   procedure Close_Standard_Output (Self : in out Process'Class) is
    begin
-      Self.Listener.Error_Occurred (Error);
-
-   exception
-      when others =>
-         null;
-   end Emit_Error_Occurred;
-
-   ---------------------------
-   -- Emit_Stderr_Available --
-   ---------------------------
-
-   overriding procedure Emit_Stderr_Available (Self : in out Process) is
-   begin
-      Self.Listener.Standard_Error_Available;
-
-   exception
-      when others =>
-         null;
-   end Emit_Stderr_Available;
-
-   --------------------------
-   -- Emit_Stdin_Available --
-   --------------------------
-
-   overriding procedure Emit_Stdin_Available (Self : in out Process) is
-   begin
-      Self.Listener.Standard_Input_Available;
-
-   exception
-      when others =>
-         null;
-   end Emit_Stdin_Available;
-
-   ---------------------------
-   -- Emit_Stdout_Available --
-   ---------------------------
-
-   overriding procedure Emit_Stdout_Available (Self : in out Process) is
-   begin
-      Self.Listener.Standard_Output_Available;
-
-   exception
-      when others =>
-         null;
-   end Emit_Stdout_Available;
-
-   -----------------
-   -- Environment --
-   -----------------
-
-   function Environment
-     (Self : Process'Class)
-      return Spawn.Environments.Process_Environment is
-   begin
-      return Self.Environment;
-   end Environment;
-
-   ---------------
-   -- Exit_Code --
-   ---------------
-
-   function Exit_Code (Self : Process'Class) return Process_Exit_Code is
-   begin
-      return Self.Exit_Code;
-   end Exit_Code;
-
-   -----------------
-   -- Exit_Status --
-   -----------------
-
-   function Exit_Status (Self : Process'Class) return Process_Exit_Status is
-   begin
-      return Self.Exit_Status;
-   end Exit_Status;
-
-   --------------
-   -- Finalize --
-   --------------
-
-   overriding procedure Finalize (Self : in out Process) is
-   begin
-      Platform.Finalize (Self, Self.Status);
-   end Finalize;
+      Self.Interal.Close_Standard_Output;
+   end Close_Standard_Output;
 
    ------------------
    -- Kill_Process --
@@ -171,53 +39,8 @@ package body Spawn.Processes is
 
    procedure Kill_Process (Self : in out Process'Class) is
    begin
-      if Self.Status = Running then
-         Platform.Kill_Process (Self);
-      end if;
+      Self.Interal.Kill_Process;
    end Kill_Process;
-
-   --------------
-   -- Listener --
-   --------------
-
-   function Listener (Self : Process'Class) return Process_Listener_Access is
-   begin
-      return Self.Listener;
-   end Listener;
-
-   --------------
-   -- Platform --
-   --------------
-
-   package body Platform is separate;
-
-   -----------------------
-   -- On_Close_Channels --
-   -----------------------
-
-   overriding procedure On_Close_Channels (Self : in out Process) is
-   begin
-      if Self.Pending_Finish then
-         Self.Pending_Finish := False;
-
-         begin
-            Self.Listener.Finished (Self.Exit_Status, Self.Exit_Code);
-
-         exception
-            when others =>
-               null;
-         end;
-      end if;
-   end On_Close_Channels;
-
-   -------------
-   -- Program --
-   -------------
-
-   function Program (Self : Process'Class) return UTF_8_String is
-   begin
-      return Ada.Strings.Unbounded.To_String (Self.Program);
-   end Program;
 
    -------------------------
    -- Read_Standard_Error --
@@ -226,8 +49,10 @@ package body Spawn.Processes is
    procedure Read_Standard_Error
      (Self : in out Process'Class;
       Data : out Ada.Streams.Stream_Element_Array;
-      Last : out Ada.Streams.Stream_Element_Offset)
-     renames Platform.Read_Standard_Error;
+      Last : out Ada.Streams.Stream_Element_Offset) is
+   begin
+      Self.Interal.Read_Standard_Error (Data, Last);
+   end Read_Standard_Error;
 
    --------------------------
    -- Read_Standard_Output --
@@ -236,8 +61,10 @@ package body Spawn.Processes is
    procedure Read_Standard_Output
      (Self : in out Process'Class;
       Data : out Ada.Streams.Stream_Element_Array;
-      Last : out Ada.Streams.Stream_Element_Offset)
-     renames Platform.Read_Standard_Output;
+      Last : out Ada.Streams.Stream_Element_Offset) is
+   begin
+      Self.Interal.Read_Standard_Output (Data, Last);
+   end Read_Standard_Output;
 
    -------------------
    -- Set_Arguments --
@@ -247,7 +74,7 @@ package body Spawn.Processes is
      (Self      : in out Process'Class;
       Arguments : Spawn.String_Vectors.UTF_8_String_Vector) is
    begin
-      Self.Arguments := Arguments;
+      Self.Interal.Set_Arguments (Arguments);
    end Set_Arguments;
 
    ---------------------
@@ -258,7 +85,7 @@ package body Spawn.Processes is
      (Self        : in out Process'Class;
       Environment : Spawn.Environments.Process_Environment) is
    begin
-      Self.Environment := Environment;
+      Self.Interal.Set_Environment (Environment);
    end Set_Environment;
 
    ------------------
@@ -267,10 +94,9 @@ package body Spawn.Processes is
 
    procedure Set_Listener
      (Self     : in out Process'Class;
-      Listener : Process_Listener_Access)
-   is
+      Listener : Spawn.Process_Listeners.Process_Listener_Access) is
    begin
-      Self.Listener := Listener;
+      Self.Interal.Set_Listener (Listener);
    end Set_Listener;
 
    -----------------
@@ -281,7 +107,7 @@ package body Spawn.Processes is
      (Self    : in out Process'Class;
       Program : UTF_8_String) is
    begin
-      Self.Program := Ada.Strings.Unbounded.To_Unbounded_String (Program);
+      Self.Interal.Set_Program (Program);
    end Set_Program;
 
    ----------------------------
@@ -290,7 +116,7 @@ package body Spawn.Processes is
 
    procedure Set_Standard_Error_PTY (Self : in out Process'Class) is
    begin
-      Self.Use_PTY (Stderr) := True;
+      Self.Interal.Set_Standard_Error_PTY;
    end Set_Standard_Error_PTY;
 
    ----------------------------
@@ -299,7 +125,7 @@ package body Spawn.Processes is
 
    procedure Set_Standard_Input_PTY (Self : in out Process'Class) is
    begin
-      Self.Use_PTY (Stdin) := True;
+      Self.Interal.Set_Standard_Input_PTY;
    end Set_Standard_Input_PTY;
 
    -----------------------------
@@ -308,7 +134,7 @@ package body Spawn.Processes is
 
    procedure Set_Standard_Output_PTY (Self : in out Process'Class) is
    begin
-      Self.Use_PTY (Stdout) := True;
+      Self.Interal.Set_Standard_Output_PTY;
    end Set_Standard_Output_PTY;
 
    ---------------------------
@@ -316,27 +142,19 @@ package body Spawn.Processes is
    ---------------------------
 
    procedure Set_Working_Directory
-     (Self      : in out Process'Class;
-      Directory : UTF_8_String) is
+     (Self : in out Process'Class; Directory : UTF_8_String) is
    begin
-      Self.Directory := Ada.Strings.Unbounded.To_Unbounded_String (Directory);
+      Self.Interal.Set_Working_Directory (Directory);
    end Set_Working_Directory;
 
    -----------
    -- Start --
    -----------
 
-   procedure Start (Self : in out Process'Class)
-     renames Platform.Start;
-
-   ------------
-   -- Status --
-   ------------
-
-   function Status (Self : Process'Class) return Process_Status is
+   procedure Start (Self : in out Process'Class) is
    begin
-      return Self.Status;
-   end Status;
+      Self.Interal.Start;
+   end Start;
 
    -----------------------
    -- Terminate_Process --
@@ -344,19 +162,8 @@ package body Spawn.Processes is
 
    procedure Terminate_Process (Self : in out Process'Class) is
    begin
-      if Self.Status = Running then
-         Platform.Terminate_Process (Self);
-      end if;
+      Self.Interal.Terminate_Process;
    end Terminate_Process;
-
-   -----------------------
-   -- Working_Directory --
-   -----------------------
-
-   function Working_Directory (Self : Process'Class) return UTF_8_String is
-   begin
-      return Ada.Strings.Unbounded.To_String (Self.Directory);
-   end Working_Directory;
 
    --------------------------
    -- Write_Standard_Input --
@@ -365,7 +172,9 @@ package body Spawn.Processes is
    procedure Write_Standard_Input
      (Self : in out Process'Class;
       Data : Ada.Streams.Stream_Element_Array;
-      Last : out Ada.Streams.Stream_Element_Offset)
-     renames Platform.Write_Standard_Input;
+      Last : out Ada.Streams.Stream_Element_Offset) is
+   begin
+      Self.Interal.Write_Standard_Input (Data, Last);
+   end Write_Standard_Input;
 
 end Spawn.Processes;

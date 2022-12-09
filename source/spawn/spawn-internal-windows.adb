@@ -1,5 +1,5 @@
 --
---  Copyright (C) 2018-2021, AdaCore
+--  Copyright (C) 2018-2022, AdaCore
 --
 --  SPDX-License-Identifier: Apache-2.0
 --
@@ -8,6 +8,7 @@ with Ada.Characters.Wide_Latin_1;
 with Ada.Strings.UTF_Encoding.Wide_Strings;
 with Ada.Strings.Wide_Fixed;
 with Ada.Strings.Wide_Unbounded;
+with Ada.Strings.Unbounded;
 with Interfaces.C.Strings;
 
 pragma Warnings (Off);
@@ -17,7 +18,8 @@ pragma Warnings (On);
 
 with Spawn.Environments.Internal;
 
-package body Spawn.Processes.Windows is
+package body Spawn.Internal.Windows is
+   use all type Spawn.Common.Pipe_Kinds;
 
    Terminate_Code : constant Windows_API.UINT := 16#F291#;
    --  Arbitrary code to use as exit code for TerminateProcess call.
@@ -39,7 +41,7 @@ package body Spawn.Processes.Windows is
 
    procedure Append_Escaped_String
      (Command_Line : in out Ada.Strings.Wide_Unbounded.Unbounded_Wide_String;
-      Argument     : Ada.Strings.Unbounded.Unbounded_String);
+      Argument     : UTF_8_String);
    --  Append the given argument to a command line such that CommandLineToArgvW
    --  return the argument string unchanged. Arguments in a command line should
    --  be separated by spaces; this subprogram doesn't add these spaces.
@@ -64,7 +66,7 @@ package body Spawn.Processes.Windows is
 
    procedure Append_Escaped_String
      (Command_Line : in out Ada.Strings.Wide_Unbounded.Unbounded_Wide_String;
-      Argument     : Ada.Strings.Unbounded.Unbounded_String)
+      Argument     : UTF_8_String)
    is
       --  Implementation of the subprogram based on Microsoft's blog post
       --  "Everyone quotes command line arguments the wrong way".
@@ -78,9 +80,8 @@ package body Spawn.Processes.Windows is
         & Ada.Characters.Wide_Latin_1.HT
         & Ada.Characters.Wide_Latin_1.VT;
 
-      S : constant Wide_String :=
-        Ada.Strings.UTF_Encoding.Wide_Strings.Decode
-          (Ada.Strings.Unbounded.To_String (Argument));
+      S : constant Wide_String := Ada.Strings.UTF_Encoding.Wide_Strings.Decode
+        (Argument);
 
       J : Natural;  --  Iterator
       N : Natural;  --  Number of sequential backslashes.
@@ -255,7 +256,7 @@ package body Spawn.Processes.Windows is
       function Make_Command_Line return Interfaces.C.wchar_array;
       function Work_Directory return String;
       function Is_Error (Value : Windows_API.BOOL) return Boolean;
-      procedure Request_Read (Kind : Standard_Pipe);
+      procedure Request_Read (Kind : Spawn.Common.Standard_Pipe);
 
       procedure Create_Pipe
         (Parent_Handle : out Windows_API.HANDLE;
@@ -459,7 +460,7 @@ package body Spawn.Processes.Windows is
       function Create_Pipes
         (Start : access Windows_API.STARTUPINFOW) return Boolean
       is
-         Child : constant array (Standard_Pipe) of
+         Child : constant array (Spawn.Common.Standard_Pipe) of
            not null access Windows_API.HANDLE :=
              (Stdin  => Start.hStdInput'Access,
               Stdout => Start.hStdOutput'Access,
@@ -467,7 +468,7 @@ package body Spawn.Processes.Windows is
 
          Ok : Boolean := True;
       begin
-         for J in Standard_Pipe loop
+         for J in Spawn.Common.Standard_Pipe loop
             Self.pipe (J).Process := Self'Unchecked_Access;
             Self.pipe (J).Kind := J;
             Create_Pipe
@@ -508,8 +509,7 @@ package body Spawn.Processes.Windows is
 
          for Arg of Self.Arguments loop
             Ada.Strings.Wide_Unbounded.Append (Result, ' ');
-            Append_Escaped_String
-              (Result, Ada.Strings.Unbounded.To_Unbounded_String (Arg));
+            Append_Escaped_String (Result, Arg);
          end loop;
 
          return Interfaces.C.To_C
@@ -520,7 +520,7 @@ package body Spawn.Processes.Windows is
       -- Request_Read --
       ------------------
 
-      procedure Request_Read (Kind : Standard_Pipe) is
+      procedure Request_Read (Kind : Spawn.Common.Standard_Pipe) is
       begin
          if Is_Error
            (Read_Write_Ex.ReadFileEx
@@ -552,8 +552,7 @@ package body Spawn.Processes.Windows is
 
       Exe : constant Interfaces.C.wchar_array :=
         Interfaces.C.To_C
-          (Ada.Strings.UTF_Encoding.Wide_Strings.Decode
-             (Ada.Strings.Unbounded.To_String (Self.Program)));
+          (Ada.Strings.UTF_Encoding.Wide_Strings.Decode (Self.Program));
 
       Args : Interfaces.C.wchar_array := Make_Command_Line;
 
@@ -664,7 +663,7 @@ package body Spawn.Processes.Windows is
      (dwErrorCode               : Windows_API.DWORD;
       dwNumberOfBytesTransfered : Windows_API.DWORD;
       lpOverlapped              : access Internal.Context;
-      Kind                      : Standard_Pipe)
+      Kind                      : Spawn.Common.Standard_Pipe)
    is
       use type Windows_API.DWORD;
       use type Windows_API.HANDLE;
@@ -805,8 +804,7 @@ package body Spawn.Processes.Windows is
 
          Self.Exit_Code := Process_Exit_Code (Exit_Code);
          Self.Status := Not_Running;
-         Self.Listener.Finished
-           (Self.Exit_Status, Self.Exit_Code);
+         Self.Listener.Finished (Self.Exit_Status, Self.Exit_Code);
       end if;
    end On_Process_Died;
 
@@ -836,4 +834,4 @@ package body Spawn.Processes.Windows is
         (dwErrorCode, dwNumberOfBytesTransfered, lpOverlapped, Stdout);
    end Standard_Output_Callback;
 
-end Spawn.Processes.Windows;
+end Spawn.Internal.Windows;
