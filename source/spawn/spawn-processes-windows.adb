@@ -357,7 +357,8 @@ package body Spawn.Processes.Windows is
                begin
                   Attempts := Attempts - 1;
 
-                  if Error /= Windows_API.ERROR_PIPE_BUSY or Attempts = 0 then
+                  if Error /= Windows_API.ERROR_PIPE_BUSY or else Attempts = 0
+                  then
                      Self.Listener.Error_Occurred (Integer (Error));
 
                      Interfaces.C.Strings.Free (Pipe_Name);
