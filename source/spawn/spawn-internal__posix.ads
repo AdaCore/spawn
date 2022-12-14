@@ -10,6 +10,7 @@ with Ada.Streams;
 with Interfaces.C;
 
 with Spawn.Common;
+with Spawn.Polls;
 
 private package Spawn.Internal is
 
@@ -20,7 +21,7 @@ private package Spawn.Internal is
 
    end Environments;
 
-   procedure Loop_Cycle (Timeout : Integer);
+   procedure Loop_Cycle (Timeout : Duration);
    --  See Spawn.Internal.Monitor
 
    subtype Pipe_Kinds is Spawn.Common.Pipe_Kinds;
@@ -28,16 +29,21 @@ private package Spawn.Internal is
    type Pipe_Array is array (Pipe_Kinds) of Interfaces.C.int;
    --  File descriptors array
 
-   type Index_Array is array (Pipe_Kinds) of Natural;
-   --  Index in poll for each descriptors array
-
-   type Process is new Spawn.Common.Process with record
+   type Process is new Spawn.Common.Process
+     and Spawn.Polls.Listener with
+   record
       pid   : Interfaces.C.int := 0;
       pipe  : Pipe_Array := (others => 0);
-      Index : Index_Array := (others => 0);
    end record;
    --  Process implementation type provides the same interface as
    --  Spawn.Processes.Process type.
+
+   overriding procedure On_Event
+     (Self   : in out Process;
+      Poll   : Spawn.Polls.Poll_Access;
+      Value  : Spawn.Polls.Descriptor;
+      Events : Spawn.Polls.Event_Set);
+   --  The handler for a new activity on the pipe descriptor.
 
    overriding procedure Finalize (Self : in out Process);
 

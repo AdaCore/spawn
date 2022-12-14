@@ -130,7 +130,7 @@ begin
    L.P.Start;
 
    while not (L.Stopped and L.P.Status = Not_Running) loop
-      Spawn.Processes.Monitor_Loop (1);
+      Spawn.Processes.Monitor_Loop (0.001);
    end loop;
 
    Write_Standard_Input (L.P, Sample => '2');

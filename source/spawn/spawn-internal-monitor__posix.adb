@@ -7,10 +7,8 @@
 with Ada.Containers.Hashed_Maps;
 with Ada.Containers.Synchronized_Queue_Interfaces;
 with Ada.Containers.Unbounded_Synchronized_Queues;
-with Ada.Containers.Vectors;
 with Ada.Interrupts.Names;
 with Ada.Strings.Unbounded;
-with Ada.Unchecked_Deallocation;
 
 with Interfaces.C.Strings;
 
@@ -19,6 +17,7 @@ with GNAT.OS_Lib;
 with Spawn.Environments.Internal;
 with Spawn.Posix;
 with Spawn.Process_Listeners;
+with Spawn.Polls.POSIX_Polls;
 
 package body Spawn.Internal.Monitor is
    use type Interfaces.C.int;
@@ -33,14 +32,6 @@ package body Spawn.Internal.Monitor is
      (Self : Process_Access;
       Kind : Common.Standard_Pipe);
 
-   procedure My_IO_Callback
-     (Process : Process_Access;
-      Kind    : Pipe_Kinds);
-
-   procedure My_End_Callback
-     (Process : Process_Access;
-      Kind    : Pipe_Kinds);
-
    procedure Check_Children;
 
    package Command_Queue_Interfaces is
@@ -50,6 +41,17 @@ package body Spawn.Internal.Monitor is
      (Queue_Interfaces => Command_Queue_Interfaces);
 
    Queue : Command_Queues.Queue;
+   Poll  : Spawn.Polls.Poll_Access;
+   Wake  : Interfaces.C.int := -1;
+
+   type Wake_Up_Listener is new Spawn.Polls.Listener with null record;
+
+   overriding procedure On_Event
+     (Self   : in out Wake_Up_Listener;
+      Poll   : Spawn.Polls.Poll_Access;
+      Value  : Spawn.Polls.Descriptor;
+      Events : Spawn.Polls.Event_Set);
+   --  Restart watching of the pipe descriptor.
 
    function Hash (Value : Interfaces.C.int) return Ada.Containers.Hash_Type;
 
@@ -63,6 +65,11 @@ package body Spawn.Internal.Monitor is
    Map : Process_Maps.Map;
 
    Pipe_Flags : constant Interfaces.C.int := Posix.O_CLOEXEC;
+
+   To_Event_Set : constant array (Spawn.Common.Pipe_Kinds) of
+     Spawn.Polls.Watch_Event_Set :=
+       (Spawn.Common.Stdin => Spawn.Polls.Output,
+        others             => Spawn.Polls.Input);
 
    protected SIGCHLD is
       entry Wait;
@@ -87,259 +94,6 @@ package body Spawn.Internal.Monitor is
       end Handle;
 
    end SIGCHLD;
-
-   package Poll is
-      procedure Wake_Up;
-
-      procedure Add_Descriptor
-        (Process : Process_Access;
-         Kind    : Pipe_Kinds;
-         fd      : Interfaces.C.int);
-
-      procedure Remove_Descriptor
-        (Process : Process_Access;
-         Kind    : Pipe_Kinds);
-
-      procedure Watch_Pipe
-        (Self : Process_Access;
-         Kind : Common.Standard_Pipe);
-
-      procedure Wait
-        (Timeout     : Interfaces.C.int;
-         IO_Callback : access procedure
-           (Process : Process_Access;
-            Kind    : Pipe_Kinds);
-         End_Callback : access procedure
-           (Process : Process_Access;
-            Kind    : Pipe_Kinds));
-   end Poll;
-
-   package body Poll is
-      type Info is record
-         Process : Process_Access;
-         Kind    : Pipe_Kinds;
-      end record;
-
-      package Info_Vectors is new Ada.Containers.Vectors (Positive, Info);
-
-      type pollfd_array_access is access all Posix.pollfd_array;
-      procedure Free is new Ada.Unchecked_Deallocation
-        (Posix.pollfd_array, pollfd_array_access);
-
-      List  : Info_Vectors.Vector;
-      fds   : pollfd_array_access;
-      Last  : Natural := 0;
-      wake  : Interfaces.C.int := 0;
-
-      procedure Swap (K, J : Positive);
-
-      ----------
-      -- Swap --
-      ----------
-
-      procedure Swap (K, J : Positive) is
-         Save : constant Posix.pollfd := fds (K);
-      begin
-         fds (K) := fds (J);
-         fds (J) := Save;
-         List.Swap (K, J);
-         List (J).Process.Index (List (J).Kind) := J;
-         List (K).Process.Index (List (K).Kind) := K;
-      end Swap;
-
-      --------------------
-      -- Add_Descriptor --
-      --------------------
-
-      procedure Add_Descriptor
-        (Process : Process_Access;
-         Kind    : Pipe_Kinds;
-         fd      : Interfaces.C.int)
-      is
-         Event_Map : constant array (Pipe_Kinds) of
-           Interfaces.C.unsigned_short :=
-             (Stdin => 0,  --  We don't monitor this until buffer is full
-              others => Posix.POLLIN);
-      begin
-         if fds = null then
-            --  Make pipe for wake up poll and initialize fds
-            declare
-               Value  : Posix.Fd_Pair;
-               Result : constant Interfaces.C.int :=
-                 Posix.pipe2 (Value, Pipe_Flags);
-            begin
-               if Result /= 0 then
-                  raise Program_Error with GNAT.OS_Lib.Errno_Message;
-               end if;
-
-               fds := new Posix.pollfd_array (1 .. 5);
-               fds (1) :=
-                 (fd      => Value (Posix.Read_End),
-                  events  => Posix.POLLIN,
-                  revents => 0);
-               wake := Value (Posix.Write_End);
-               List.Append ((null, Kind)); --  Dummy value
-               Last := 1;
-            end;
-         elsif fds'Length < Last + 1 then
-            --  Grow fds by factor of 1.5
-            declare
-               Old : pollfd_array_access := fds;
-            begin
-               fds := new Posix.pollfd_array (1 .. fds'Last * 3 / 2);
-               fds (Old'Range) := Old.all;
-               Free (Old);
-            end;
-         end if;
-
-         Last := Last + 1;
-         Process.Index (Kind) := Last;
-
-         fds (Last) :=
-           (fd      => fd,
-            events  => Event_Map (Kind),
-            revents => 0);
-
-         if List.Last_Index < Last then
-            List.Append ((Process, Kind));
-         else
-            List (Last) := (Process, Kind);
-         end if;
-      end Add_Descriptor;
-
-      -----------------------
-      -- Remove_Descriptor --
-      -----------------------
-
-      procedure Remove_Descriptor
-        (Process : Process_Access;
-         Kind    : Pipe_Kinds)
-      is
-         Index : constant Natural := Process.Index (Kind);
-      begin
-         if Index > 0 then
-            fds (Index) := fds (Last);
-            List (Index) := List (Last);
-            Last := Last - 1;
-            List (Index).Process.Index (List (Index).Kind) := Index;
-            List.Set_Length (Ada.Containers.Count_Type (Last));
-            Process.Index (Kind) := 0;
-         end if;
-      end Remove_Descriptor;
-
-      ----------
-      -- Wait --
-      ----------
-
-      procedure Wait
-        (Timeout     : Interfaces.C.int;
-         IO_Callback : access procedure
-           (Process : Process_Access;
-            Kind    : Pipe_Kinds);
-         End_Callback : access procedure
-           (Process : Process_Access;
-            Kind    : Pipe_Kinds))
-      is
-         use type Interfaces.C.unsigned_short;
-
-         Launch_Index : Natural;
-         Process      : Process_Access;
-
-         Kind  : Pipe_Kinds;
-         Index : Positive := 2;
-         --  Wait for an event in the poll
-         Count : Interfaces.C.int := Posix.poll
-           (fds.all, Interfaces.C.unsigned_long (Last), Timeout);
-      begin
-         --  Check if ve have wake up call
-         if fds (1).revents /= 0 then
-            declare
-               Data   : Ada.Streams.Stream_Element_Array (1 .. 16);
-               Ignore : Interfaces.C.size_t;
-            begin
-               Ignore := Posix.read (fds (1).fd, Data, Data'Length);
-               Count  := Count - 1;
-            end;
-         end if;
-
-         while Index <= Last loop
-            if fds (Index).revents = 0 then
-               Index := Index + 1;
-            else
-               Count := Count - 1;
-               Kind := List (Index).Kind;
-               Process := List (Index).Process;
-               Launch_Index := Process.Index (Launch);
-
-               if fds (Index).revents /= 0
-                 and then Kind /= Launch
-                 and then Launch_Index > Index
-               then
-                  --  Process Launch events first
-                  Swap (Index, Launch_Index);
-                  Kind := Launch;
-               end if;
-
-               if (fds (Index).revents and fds (Index).events) /= 0 then
-                  IO_Callback (Process, Kind);
-                  fds (Index).revents :=
-                    fds (Index).revents - fds (Index).events;
-                  fds (Index).events := 0;  --  Do nothing until users action
-               end if;
-
-               if fds (Index).revents /= 0 then
-                  --  Some error happened
-                  End_Callback (Process, Kind);
-                  --  Don't listen this fd since error
-                  Remove_Descriptor (Process, Kind);
-               else
-                  Index := Index + 1;
-               end if;
-
-               exit when Count = 0;
-            end if;
-         end loop;
-      end Wait;
-
-      -------------
-      -- Wake_Up --
-      -------------
-
-      procedure Wake_Up is
-      begin
-         if wake /= 0 then
-            declare
-               use type Interfaces.C.size_t;
-               Result : constant Interfaces.C.size_t :=
-                 Posix.write (wake, (1 => 0), 1);
-            begin
-               if Result /= 1 then
-                  raise Program_Error with GNAT.OS_Lib.Errno_Message;
-               end if;
-            end;
-         end if;
-      end Wake_Up;
-
-      ----------------
-      -- Watch_Pipe --
-      ----------------
-
-      procedure Watch_Pipe
-        (Self : Process_Access;
-         Kind : Common.Standard_Pipe)
-      is
-         Event_Map : constant array (Common.Standard_Pipe) of
-           Interfaces.C.unsigned_short :=
-             (Stdin => Posix.POLLOUT,
-              others => Posix.POLLIN);
-         Index : constant Natural := Self.Index (Kind);
-      begin
-         if Index > 0 then
-            fds (Index).events := Event_Map (Kind);
-         end if;
-      end Watch_Pipe;
-
-   end Poll;
 
    --------------------
    -- Check_Children --
@@ -431,9 +185,10 @@ package body Spawn.Internal.Monitor is
      (Self : Process_Access;
       Kind : Common.Standard_Pipe)
    is
-      Ignore : Interfaces.C.int := Posix.close (Self.pipe (Kind));
+      Ignore : Interfaces.C.int;
    begin
-      Poll.Remove_Descriptor (Self, Kind);
+      Poll.Watch (Self.pipe (Kind), Spawn.Polls.Empty_Set, null);
+      Ignore := Posix.close (Self.pipe (Kind));
    end Do_Close_Pipe;
 
    -------------
@@ -441,9 +196,11 @@ package body Spawn.Internal.Monitor is
    -------------
 
    procedure Enqueue (Value : Command) is
+      Ignore : Interfaces.C.size_t;
    begin
       Queue.Enqueue (Value);
-      Poll.Wake_Up;
+      --  Wake up monitoring tread.
+      Ignore := Posix.write (Wake, (1 => 0), 1);
    end Enqueue;
 
    ----------
@@ -459,8 +216,9 @@ package body Spawn.Internal.Monitor is
    -- Loop_Cycle --
    ----------------
 
-   procedure Loop_Cycle (Timeout : Integer) is
+   procedure Loop_Cycle (Timeout : Duration) is
       use type Ada.Containers.Count_Type;
+
       Command : Monitor.Command;
    begin
       select
@@ -479,84 +237,15 @@ package body Spawn.Internal.Monitor is
             when Close_Pipe =>
                Do_Close_Pipe (Command.Process, Command.Pipe);
             when Watch_Pipe =>
-               Poll.Watch_Pipe (Command.Process, Command.Pipe);
+               Poll.Watch
+                 (Value    => Command.Process.pipe (Command.Pipe),
+                  Events   => To_Event_Set (Command.Pipe),
+                  Listener => Polls.Listener_Access (Command.Process));
          end case;
       end loop;
 
-      Poll.Wait
-        (Interfaces.C.int (Timeout),
-         My_IO_Callback'Access,
-         My_End_Callback'Access);
+      Poll.Wait (Timeout);
    end Loop_Cycle;
-
-   ---------------------
-   -- My_End_Callback --
-   ---------------------
-
-   procedure My_End_Callback
-     (Process : Process_Access;
-      Kind    : Pipe_Kinds) is
-   begin
-      if Kind = Launch then
-         if Process.Exit_Code = Process_Exit_Code'Last then
-            Process.Status := Running;
-            if Process.Listener /= null then
-               Process.Listener.Started;
-               Process.Listener.Standard_Input_Available;
-            end if;
-
-         else
-            if Process.Listener /= null then
-               Process.Listener.Error_Occurred (Integer (Process.Exit_Code));
-            end if;
-         end if;
-      end if;
-   end My_End_Callback;
-
-   --------------------
-   -- My_IO_Callback --
-   --------------------
-
-   procedure My_IO_Callback
-     (Process : Process_Access;
-      Kind    : Pipe_Kinds)
-   is
-   begin
-      case Kind is
-         when Stdin =>
-            if Process.Listener /= null then
-               Process.Listener.Standard_Input_Available;
-            end if;
-         when Stdout =>
-            if Process.Listener /= null then
-               Process.Listener.Standard_Output_Available;
-            end if;
-         when Stderr =>
-            if Process.Listener /= null then
-               Process.Listener.Standard_Error_Available;
-            end if;
-         when Launch =>
-            declare
-               use type Ada.Streams.Stream_Element_Offset;
-               use type Interfaces.C.size_t;
-
-               Count      : Interfaces.C.size_t;
-               errno      : Integer := 0;
-               Error_Dump : Ada.Streams.Stream_Element_Array
-                 (1 .. errno'Size / 8)
-                 with Import, Convention => Ada, Address => errno'Address;
-            begin
-               Count := Posix.read
-                 (Process.pipe (Kind),
-                  Error_Dump,
-                  Error_Dump'Length);
-
-               if Count = Error_Dump'Length then
-                  Process.Exit_Code := Process_Exit_Code (errno);
-               end if;
-            end;
-      end case;
-   end My_IO_Callback;
 
    -------------------
    -- Start_Process --
@@ -605,9 +294,9 @@ package body Spawn.Internal.Monitor is
 
       std : array (Pipe_Kinds) of Posix.Fd_Pair;
       Child_Ends : constant array (std'Range) of Posix.Pipe_Ends :=
-        (Posix.Read_End, others => Posix.Write_End);
+        (Stdin => Posix.Read_End, others => Posix.Write_End);
       Parent_Ends : constant array (std'Range) of Posix.Pipe_Ends :=
-        (Posix.Write_End, others => Posix.Read_End);
+        (Stdin => Posix.Write_End, others => Posix.Read_End);
       Dup : constant array (Stdin .. Stderr) of Interfaces.C.int := (0, 1, 2);
       r : Interfaces.C.int;
       pragma Unreferenced (r);
@@ -718,7 +407,12 @@ package body Spawn.Internal.Monitor is
 
       for X in Self.pipe'Range loop
          Self.pipe (X) := std (X) (Parent_Ends (X));
-         Poll.Add_Descriptor (Self, X, std (X) (Parent_Ends (X)));
+         if X /= Stdin then
+            Poll.Watch
+              (Value    => Self.pipe (X),
+               Events   => To_Event_Set (X),
+               Listener => Spawn.Polls.Listener_Access (Self));
+         end if;
       end loop;
    end Start_Process;
 
@@ -730,6 +424,46 @@ package body Spawn.Internal.Monitor is
 
    procedure Initialize is separate;
 
+   type POSIX_Poll_Access is access Polls.POSIX_Polls.POSIX_Poll;
+
+   --------------
+   -- On_Event --
+   --------------
+
+   overriding procedure On_Event
+     (Self   : in out Wake_Up_Listener;
+      Poll   : Spawn.Polls.Poll_Access;
+      Value  : Spawn.Polls.Descriptor;
+      Events : Spawn.Polls.Event_Set)
+   is
+      Byte   : Ada.Streams.Stream_Element_Array (1 .. 1);
+      Ignore : Interfaces.C.size_t;
+   begin
+      if Events (Spawn.Polls.Input) then
+         Ignore := Posix.read (Value, Byte, Byte'Length);
+         Poll.Watch
+           (Value    => Value,
+            Events   => Spawn.Polls.Input,
+            Listener => Self'Unchecked_Access);
+      end if;
+   end On_Event;
+
+   WL : aliased Wake_Up_Listener;
+
 begin
+   declare
+      Object : constant POSIX_Poll_Access := new Polls.POSIX_Polls.POSIX_Poll;
+      Value  : Posix.Fd_Pair;
+      Result : constant Interfaces.C.int := Posix.pipe2 (Value, Pipe_Flags);
+   begin
+      pragma Assert (Result = 0, GNAT.OS_Lib.Errno_Message);
+      Wake := Value (Posix.Write_End);
+      Poll := Spawn.Polls.Poll_Access (Object);
+      Poll.Initialize;
+      Poll.Watch
+        (Value    => Value (Posix.Read_End),
+         Events   => Spawn.Polls.Input,
+         Listener => WL'Access);
+   end;
    Initialize;
 end Spawn.Internal.Monitor;

@@ -12,6 +12,7 @@ with GNAT.OS_Lib;
 
 with Spawn.Internal.Monitor;
 with Spawn.Posix;
+with Spawn.Process_Listeners;
 
 package body Spawn.Internal is
    use all type Spawn.Common.Pipe_Kinds;
@@ -98,8 +99,79 @@ package body Spawn.Internal is
    -- Loop_Cycle --
    ----------------
 
-   procedure Loop_Cycle (Timeout : Integer)
+   procedure Loop_Cycle (Timeout : Duration)
      renames Spawn.Internal.Monitor.Loop_Cycle;
+
+   --------------
+   -- On_Event --
+   --------------
+
+   overriding procedure On_Event
+     (Self   : in out Process;
+      Poll   : Spawn.Polls.Poll_Access;
+      Value  : Spawn.Polls.Descriptor;
+      Events : Spawn.Polls.Event_Set)
+   is
+      use all type Spawn.Polls.Event;
+      use type Spawn.Polls.Descriptor;
+      use type Spawn.Process_Listeners.Process_Listener_Access;
+   begin
+      if Value = Self.pipe (Launch) then
+         if Events (Input) then
+            declare
+               use type Ada.Streams.Stream_Element_Offset;
+               use type Interfaces.C.size_t;
+
+               Count      : Interfaces.C.size_t;
+               errno      : Integer := 0;
+               Error_Data : Ada.Streams.Stream_Element_Array
+                 (1 .. errno'Size / 8)
+                 with Import, Convention => Ada, Address => errno'Address;
+            begin
+               Count := Posix.read (Value, Error_Data, Error_Data'Length);
+
+               if Count = Error_Data'Length then
+                  Self.Exit_Code := Process_Exit_Code (errno);
+               end if;
+            end;
+         end if;
+
+         if Events (Close) or Events (Error) then
+            if Self.Exit_Code = Process_Exit_Code'Last then
+               Self.Status := Running;
+               if Self.Listener /= null then
+                  Self.Listener.Started;
+                  Self.Listener.Standard_Input_Available;
+               end if;
+
+            else
+               if Self.Listener /= null then
+                  Self.Listener.Error_Occurred (Integer (Self.Exit_Code));
+               end if;
+            end if;
+         end if;
+
+         declare
+            Error : constant Interfaces.C.int := Posix.close (Value);
+         begin
+            if Error /= 0 and Self.Listener /= null then
+               Self.Listener.Error_Occurred (Integer (Error));
+            end if;
+         end;
+      elsif Value = Self.pipe (Stdin) then
+         if Events (Output) then
+            Self.Listener.Standard_Input_Available;
+         end if;
+      elsif Value = Self.pipe (Stdout) then
+         if Events (Input) then
+            Self.Listener.Standard_Output_Available;
+         end if;
+      elsif Value = Self.pipe (Stderr) then
+         if Events (Input) then
+            Self.Listener.Standard_Error_Available;
+         end if;
+      end if;
+   end On_Event;
 
    -------------------------
    -- Read_Standard_Error --

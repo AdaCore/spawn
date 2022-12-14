@@ -22,6 +22,7 @@ int SPAWN_EAGAIN = EAGAIN;
 int SPAWN_TIOCSCTTY = TIOCSCTTY;
 unsigned short SPAWN_POLLIN = POLLIN;
 unsigned short SPAWN_POLLOUT = POLLOUT;
+unsigned short SPAWN_POLLHUP = POLLHUP;
 
 extern int SPAWN_NONBLOCK;
 extern int SPAWN_CLOEXEC;
@@ -31,6 +32,7 @@ extern int SPAWN_EINTR;
 extern int SPAWN_EAGAIN;
 extern unsigned short SPAWN_POLLIN;
 extern unsigned short SPAWN_POLLOUT;
+extern unsigned short SPAWN_POLLHUP;
 
 /* Macros */
 

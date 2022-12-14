@@ -6,7 +6,7 @@
 
 with Spawn.Internal;
 
-procedure Spawn.Processes.Monitor_Loop (Timeout : Integer) is
+procedure Spawn.Processes.Monitor_Loop (Timeout : Duration) is
 begin
    Spawn.Internal.Loop_Cycle (Timeout);
 end Spawn.Processes.Monitor_Loop;

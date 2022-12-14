@@ -23,7 +23,7 @@ private package Spawn.Internal is
       function "<" (Left, Right : UTF_8_String) return Boolean;
    end Environments;
 
-   procedure Loop_Cycle (Timeout : Integer);
+   procedure Loop_Cycle (Timeout : Duration);
    --  See Spawn.Internal.Monitor
 
    type Process is tagged;
@@ -41,7 +41,7 @@ private package Spawn.Internal is
       Kind         : Pipe_Kinds;
       Handle       : Windows_API.HANDLE := System.Win32.INVALID_HANDLE_VALUE;
       Buffer       : Stream_Element_Buffer;
-      Last         : Ada.Streams.Stream_Element_Count := 0 with Atomic;
+      Last         : Ada.Streams.Stream_Element_Count := 0;
       --  If Last = 0 that means the Buffer is free and no I/O operation in
       --  progress.
       --  If Last in Buffer'Range that means a I/O operation in progress

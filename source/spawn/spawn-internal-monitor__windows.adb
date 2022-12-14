@@ -67,7 +67,7 @@ package body Spawn.Internal.Monitor is
       procedure Wake_Up;
 
       procedure Add_Process (Process : Process_Access);
-      procedure Wait_Process_Death (Timeout : Integer);
+      procedure Wait_Process_Death (Timeout : Duration);
    end Poll;
 
    package body Poll is
@@ -126,7 +126,7 @@ package body Spawn.Internal.Monitor is
       -- Wait_Process_Death --
       ------------------------
 
-      procedure Wait_Process_Death (Timeout : Integer) is
+      procedure Wait_Process_Death (Timeout : Duration) is
          use type Windows_API.DWORD;
 
          procedure Swap (Left, Right : in out Windows_API.HANDLE);
@@ -148,7 +148,7 @@ package body Spawn.Internal.Monitor is
               (nCount         => Windows_API.DWORD (Last),
                lpHandles      => fds.all,
                bWaitAll       => System.Win32.FALSE,
-               dwMilliseconds => Windows_API.DWORD (Timeout),
+               dwMilliseconds => Windows_API.DWORD (Timeout * 1000.0),
                bAlertable     => System.Win32.TRUE);
 
             if Result /= Windows_API.WAIT_IO_COMPLETION then
@@ -253,7 +253,7 @@ package body Spawn.Internal.Monitor is
    -- Loop_Cycle --
    ----------------
 
-   procedure Loop_Cycle (Timeout : Integer) is
+   procedure Loop_Cycle (Timeout : Duration) is
       use type Ada.Containers.Count_Type;
       Command : Monitor.Command;
    begin

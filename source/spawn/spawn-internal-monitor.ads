@@ -23,7 +23,7 @@ private package Spawn.Internal.Monitor is
 
    procedure Enqueue (Value : Command);
 
-   procedure Loop_Cycle (Timeout : Integer);
-   --  Timeout in milliseconds. Dont wait if zero. Wait forever if < 0
+   procedure Loop_Cycle (Timeout : Duration);
+   --  Timeout. Dont wait if zero.
 
 end Spawn.Internal.Monitor;

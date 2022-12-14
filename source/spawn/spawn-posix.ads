@@ -53,6 +53,8 @@ package Spawn.Posix is
      with Import, Convention => C, External_Name => "SPAWN_POLLIN";
    POLLOUT    : constant Interfaces.C.unsigned_short
      with Import, Convention => C, External_Name => "SPAWN_POLLOUT";
+   POLLHUP    : constant Interfaces.C.unsigned_short
+     with Import, Convention => C, External_Name => "SPAWN_POLLHUP";
    --
    function fork  return Interfaces.C.int
      with Import, Convention => C, External_Name => "fork";

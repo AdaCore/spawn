@@ -151,19 +151,19 @@ begin
    L.Proc.Start;
 
    while not L.Started loop
-      Spawn.Processes.Monitor_Loop (1);
+      Spawn.Processes.Monitor_Loop (0.001);
    end loop;
 
    L.Proc.Terminate_Process;
 
    while Ada.Strings.Unbounded.Length (L.Stdout) = 0 loop
-      Spawn.Processes.Monitor_Loop (1);
+      Spawn.Processes.Monitor_Loop (0.001);
    end loop;
 
    L.Proc.Kill_Process;
 
    while not L.Stopped loop
-      Spawn.Processes.Monitor_Loop (1);
+      Spawn.Processes.Monitor_Loop (0.001);
    end loop;
 
    declare

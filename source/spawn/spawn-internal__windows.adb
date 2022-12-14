@@ -102,7 +102,7 @@ package body Spawn.Internal is
    -- Loop_Cycle --
    ----------------
 
-   procedure Loop_Cycle (Timeout : Integer)
+   procedure Loop_Cycle (Timeout : Duration)
      renames Spawn.Internal.Monitor.Loop_Cycle;
 
    -------------------------
