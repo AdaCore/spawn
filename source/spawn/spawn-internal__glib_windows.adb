@@ -151,8 +151,7 @@ package body Spawn.Internal is
             lpCompletionRoutine  => Callback (Kind));
 
          if Ok = System.Win32.FALSE then
-            Self.Listener.Error_Occurred
-              (Integer (System.Win32.GetLastError));
+            Self.Emit_Error_Occurred (Integer (System.Win32.GetLastError));
          end if;
       end On_No_Data;
 
@@ -346,8 +345,7 @@ package body Spawn.Internal is
             lpCompletionRoutine   => Standard_Input_Callback'Access);
 
          if Ok = System.Win32.FALSE then
-            Self.Listener.Error_Occurred
-              (Integer (System.Win32.GetLastError));
+            Self.Emit_Error_Occurred (Integer (System.Win32.GetLastError));
          end if;
       end On_No_Data;
 

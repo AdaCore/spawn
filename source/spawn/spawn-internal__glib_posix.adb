@@ -165,7 +165,7 @@ package body Spawn.Internal is
       if Status = 0 then
          Spawn.Channels.Shutdown_Channels (Self.Channels);
 
-         Self.Listener.Error_Occurred (Integer (Glib.Error.Get_Code (Error)));
+         Self.Emit_Error_Occurred (Integer (Glib.Error.Get_Code (Error)));
 
          return;
       end if;
@@ -176,7 +176,7 @@ package body Spawn.Internal is
          Self.Reference'Access);
 
       Self.Status := Running;
-      Self.Listener.Started;
+      Self.Emit_Started;
 
       Spawn.Channels.Start_Watch (Self.Channels);
    end Do_Start_Process;
@@ -253,7 +253,7 @@ package body Spawn.Internal is
       end if;
 
       begin
-         Self.Listener.Finished (Self.Exit_Status, Self.Exit_Code);
+         Self.Emit_Finished (Self.Exit_Status, Self.Exit_Code);
 
       exception
          when others =>
@@ -264,7 +264,7 @@ package body Spawn.Internal is
 
    exception
       when E : others =>
-         Self.Listener.Exception_Occurred (E);
+         Self.Emit_Exception_Occurred (E);
    end My_Death_Callback;
 
    -------------------------

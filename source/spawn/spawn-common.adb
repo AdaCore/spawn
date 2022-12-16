@@ -5,6 +5,112 @@
 --
 
 package body Spawn.Common is
+   use type Spawn.Process_Listeners.Process_Listener_Access;
+
+   -------------------------
+   -- Emit_Error_Occurred --
+   -------------------------
+
+   procedure Emit_Error_Occurred
+     (Self          : Process'Class;
+      Process_Error : Integer) is
+   begin
+      if Self.Listener /= null then
+         Self.Listener.Error_Occurred (Process_Error);
+      end if;
+   exception
+      when others =>
+         null;
+   end Emit_Error_Occurred;
+
+   -----------------------------
+   -- Emit_Exception_Occurred --
+   -----------------------------
+
+   procedure Emit_Exception_Occurred
+     (Self       : Process'Class;
+      Occurrence : Ada.Exceptions.Exception_Occurrence) is
+   begin
+      if Self.Listener /= null then
+         Self.Listener.Exception_Occurred (Occurrence);
+      end if;
+   exception
+      when others =>
+         null;
+   end Emit_Exception_Occurred;
+
+   -------------------
+   -- Emit_Finished --
+   -------------------
+
+   procedure Emit_Finished
+     (Self        : Process'Class;
+      Exit_Status : Process_Exit_Status;
+      Exit_Code   : Process_Exit_Code) is
+   begin
+      if Self.Listener /= null then
+         Self.Listener.Finished (Exit_Status, Exit_Code);
+      end if;
+   exception
+      when others =>
+         null;
+   end Emit_Finished;
+
+   ------------------
+   -- Emit_Started --
+   ------------------
+
+   procedure Emit_Started (Self : Process'Class) is
+   begin
+      if Self.Listener /= null then
+         Self.Listener.Started;
+      end if;
+   exception
+      when others =>
+         null;
+   end Emit_Started;
+
+   ---------------------------
+   -- Emit_Stderr_Available --
+   ---------------------------
+
+   procedure Emit_Stderr_Available (Self : Process'Class) is
+   begin
+      if Self.Listener /= null then
+         Self.Listener.Standard_Error_Available;
+      end if;
+   exception
+      when others =>
+         null;
+   end Emit_Stderr_Available;
+
+   --------------------------
+   -- Emit_Stdin_Available --
+   --------------------------
+
+   procedure Emit_Stdin_Available (Self : Process'Class) is
+   begin
+      if Self.Listener /= null then
+         Self.Listener.Standard_Input_Available;
+      end if;
+   exception
+      when others =>
+         null;
+   end Emit_Stdin_Available;
+
+   ---------------------------
+   -- Emit_Stdout_Available --
+   ---------------------------
+
+   procedure Emit_Stdout_Available (Self : Process'Class) is
+   begin
+      if Self.Listener /= null then
+         Self.Listener.Standard_Output_Available;
+      end if;
+   exception
+      when others =>
+         null;
+   end Emit_Stdout_Available;
 
    -------------------
    -- Set_Arguments --

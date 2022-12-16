@@ -12,7 +12,6 @@ with GNAT.OS_Lib;
 
 with Spawn.Internal.Monitor;
 with Spawn.Posix;
-with Spawn.Process_Listeners;
 
 package body Spawn.Internal is
    use all type Spawn.Common.Pipe_Kinds;
@@ -114,7 +113,6 @@ package body Spawn.Internal is
    is
       use all type Spawn.Polls.Event;
       use type Spawn.Polls.Descriptor;
-      use type Spawn.Process_Listeners.Process_Listener_Access;
    begin
       if Value = Self.pipe (Launch) then
          if Events (Input) then
@@ -139,36 +137,32 @@ package body Spawn.Internal is
          if Events (Close) or Events (Error) then
             if Self.Exit_Code = Process_Exit_Code'Last then
                Self.Status := Running;
-               if Self.Listener /= null then
-                  Self.Listener.Started;
-                  Self.Listener.Standard_Input_Available;
-               end if;
+               Self.Emit_Started;
+               Self.Emit_Stdin_Available;
 
             else
-               if Self.Listener /= null then
-                  Self.Listener.Error_Occurred (Integer (Self.Exit_Code));
-               end if;
+               Self.Emit_Error_Occurred (Integer (Self.Exit_Code));
             end if;
          end if;
 
          declare
             Error : constant Interfaces.C.int := Posix.close (Value);
          begin
-            if Error /= 0 and Self.Listener /= null then
-               Self.Listener.Error_Occurred (Integer (Error));
+            if Error /= 0 then
+               Self.Emit_Error_Occurred (Integer (Error));
             end if;
          end;
       elsif Value = Self.pipe (Stdin) then
          if Events (Output) then
-            Self.Listener.Standard_Input_Available;
+            Self.Emit_Stdin_Available;
          end if;
       elsif Value = Self.pipe (Stdout) then
          if Events (Input) then
-            Self.Listener.Standard_Output_Available;
+            Self.Emit_Stdout_Available;
          end if;
       elsif Value = Self.pipe (Stderr) then
          if Events (Input) then
-            Self.Listener.Standard_Error_Available;
+            Self.Emit_Stderr_Available;
          end if;
       end if;
    end On_Event;

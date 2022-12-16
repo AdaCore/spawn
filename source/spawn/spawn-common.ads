@@ -6,6 +6,7 @@
 
 --  Base type for process implementation on all platforms.
 
+with Ada.Exceptions;
 with Ada.Finalization;
 with Ada.Strings.Unbounded;
 
@@ -69,6 +70,24 @@ package Spawn.Common is
    procedure Set_Standard_Output_PTY (Self : in out Process'Class);
 
    procedure Set_Standard_Error_PTY (Self : in out Process'Class);
+
+   procedure Emit_Started (Self : Process'Class);
+   procedure Emit_Stdin_Available (Self : Process'Class);
+   procedure Emit_Stderr_Available (Self : Process'Class);
+   procedure Emit_Stdout_Available (Self : Process'Class);
+
+   procedure Emit_Error_Occurred
+     (Self          : Process'Class;
+      Process_Error : Integer);
+
+   procedure Emit_Exception_Occurred
+     (Self       : Process'Class;
+      Occurrence : Ada.Exceptions.Exception_Occurrence);
+
+   procedure Emit_Finished
+     (Self        : Process'Class;
+      Exit_Status : Process_Exit_Status;
+      Exit_Code   : Process_Exit_Code);
 
    function Status (Self : Process'Class) return Process_Status is
      (Self.Status);

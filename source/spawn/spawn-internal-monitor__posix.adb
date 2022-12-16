@@ -16,12 +16,10 @@ with GNAT.OS_Lib;
 
 with Spawn.Environments.Internal;
 with Spawn.Posix;
-with Spawn.Process_Listeners;
 with Spawn.Polls.POSIX_Polls;
 
 package body Spawn.Internal.Monitor is
    use type Interfaces.C.int;
-   use type Spawn.Process_Listeners.Process_Listener_Access;
    use all type Pipe_Kinds;
 
    type Process_Access is access all Process'Class;
@@ -171,9 +169,7 @@ package body Spawn.Internal.Monitor is
 
          Process.Status := Not_Running;
 
-         if Process.Listener /= null then
-            Process.Listener.Finished (Process.Exit_Status, Process.Exit_Code);
-         end if;
+         Process.Emit_Finished (Process.Exit_Status, Process.Exit_Code);
       end if;
    end Check_Children;
 
@@ -332,9 +328,7 @@ package body Spawn.Internal.Monitor is
    begin
       --  Create pipes for children's strio
       if (for some X of std => Posix.pipe2 (X, Pipe_Flags) /= 0) then
-         if Self.Listener /= null then
-            Self.Listener.Error_Occurred (GNAT.OS_Lib.Errno);
-         end if;
+         Self.Emit_Error_Occurred (GNAT.OS_Lib.Errno);
          Interfaces.C.Strings.Free (dir);
          return;
       end if;
@@ -345,9 +339,7 @@ package body Spawn.Internal.Monitor is
 
       if pid = -1 then
          --  Fork failed
-         if Self.Listener /= null then
-            Self.Listener.Error_Occurred (GNAT.OS_Lib.Errno);
-         end if;
+         Self.Emit_Error_Occurred (GNAT.OS_Lib.Errno);
          Free (argv);
          Free (envp);
          Interfaces.C.Strings.Free (dir);
@@ -383,9 +375,7 @@ package body Spawn.Internal.Monitor is
       if (for some X in std'Range =>
             Posix.close (std (X) (Child_Ends (X))) /= 0)
       then
-         if Self.Listener /= null then
-            Self.Listener.Error_Occurred (GNAT.OS_Lib.Errno);
-         end if;
+         Self.Emit_Error_Occurred (GNAT.OS_Lib.Errno);
          return;
       end if;
 
@@ -396,9 +386,7 @@ package body Spawn.Internal.Monitor is
                Posix.F_SETFL,
                Posix.O_NONBLOCK) /= 0)
       then
-         if Self.Listener /= null then
-            Self.Listener.Error_Occurred (GNAT.OS_Lib.Errno);
-         end if;
+         Self.Emit_Error_Occurred (GNAT.OS_Lib.Errno);
          return;
       end if;
 

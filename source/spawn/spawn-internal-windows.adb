@@ -185,8 +185,7 @@ package body Spawn.Internal.Windows is
          use type Windows_API.BOOL;
       begin
          if Value = System.Win32.FALSE then
-            Self.Listener.Error_Occurred
-              (Integer (System.Win32.GetLastError));
+            Self.Emit_Error_Occurred (Integer (System.Win32.GetLastError));
          end if;
       end Check_Error;
 
@@ -359,7 +358,7 @@ package body Spawn.Internal.Windows is
                   Attempts := Attempts - 1;
 
                   if Error /= Windows_API.ERROR_PIPE_BUSY or Attempts = 0 then
-                     Self.Listener.Error_Occurred (Integer (Error));
+                     Self.Emit_Error_Occurred (Integer (Error));
 
                      Interfaces.C.Strings.Free (Pipe_Name);
 
@@ -385,7 +384,7 @@ package body Spawn.Internal.Windows is
             hTemplateFile         => 0);
 
          if Child_Handle = System.Win32.INVALID_HANDLE_VALUE then
-            Self.Listener.Error_Occurred (Integer (System.Win32.GetLastError));
+            Self.Emit_Error_Occurred (Integer (System.Win32.GetLastError));
 
             Interfaces.C.Strings.Free (Pipe_Name);
             Ignore (System.Win32.CloseHandle (Parent_Handle));
@@ -431,7 +430,7 @@ package body Spawn.Internal.Windows is
                               System.OS_Interface.Wait_Infinite));
 
                      when others =>
-                        Self.Listener.Error_Occurred
+                        Self.Emit_Error_Occurred
                           (Integer (System.Win32.GetLastError));
 
                         Ignore (System.Win32.CloseHandle (Overlapped.hEvent));
@@ -490,7 +489,7 @@ package body Spawn.Internal.Windows is
       function Is_Error (Value : Windows_API.BOOL) return Boolean is
       begin
          if Value = System.Win32.FALSE then
-            Self.Listener.Error_Occurred (Integer (System.Win32.GetLastError));
+            Self.Emit_Error_Occurred (Integer (System.Win32.GetLastError));
             return True;
          else
             return False;
@@ -588,8 +587,8 @@ package body Spawn.Internal.Windows is
       On_Start.all;
 
       Self.Status := Running;
-      Self.Listener.Started;
-      Self.Listener.Standard_Input_Available;
+      Self.Emit_Started;
+      Self.Emit_Stdin_Available;
       Request_Read (Stdout);
       Request_Read (Stderr);
    end Do_Start_Process;
@@ -686,7 +685,7 @@ package body Spawn.Internal.Windows is
          if not (Self.Status = Not_Running
                  and then dwErrorCode = Windows_API.ERROR_OPERATION_ABORTED)
          then
-            Self.Listener.Error_Occurred (Integer (dwErrorCode));
+            Self.Emit_Error_Occurred (Integer (dwErrorCode));
          end if;
 
          return;
@@ -703,17 +702,17 @@ package body Spawn.Internal.Windows is
                Last := Last - Spawn.Internal.Buffer_Size;
                pragma Assert (Last = Transfered);
 
-               Self.Listener.Standard_Input_Available;
+               Self.Emit_Stdin_Available;
             end if;
             --  FIXME: what shall we do if Last /= Transfered?
 
          when Stderr =>
             lpOverlapped.Last := Transfered;
-            Self.Listener.Standard_Error_Available;
+            Self.Emit_Stderr_Available;
 
          when Stdout =>
             lpOverlapped.Last := Transfered;
-            Self.Listener.Standard_Output_Available;
+            Self.Emit_Stdout_Available;
       end case;
    end IO_Callback;
 
@@ -735,8 +734,7 @@ package body Spawn.Internal.Windows is
          use type Windows_API.BOOL;
       begin
          if Value = System.Win32.FALSE then
-            Self.Listener.Error_Occurred
-              (Integer (System.Win32.GetLastError));
+            Self.Emit_Error_Occurred (Integer (System.Win32.GetLastError));
             return True;
          else
             return False;
@@ -804,7 +802,7 @@ package body Spawn.Internal.Windows is
 
          Self.Exit_Code := Process_Exit_Code (Exit_Code);
          Self.Status := Not_Running;
-         Self.Listener.Finished (Self.Exit_Status, Self.Exit_Code);
+         Self.Emit_Finished (Self.Exit_Status, Self.Exit_Code);
       end if;
    end On_Process_Died;
 

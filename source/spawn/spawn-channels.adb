@@ -12,9 +12,8 @@ pragma Warnings (On);
 --  Ada 2022 features.
 
 with Interfaces.C;
-pragma Warnings (Off, "internal GNAT unit");
-with System.OS_Interface;
-pragma Warnings (On);
+
+with GNAT.OS_Lib;
 
 with Glib.Error;
 
@@ -77,13 +76,6 @@ package body Spawn.Channels is
      with Convention => C;
    --  Common code to start (continue) watching of the IO channel.
 
-   procedure Emit_Error_Occurred
-     (Self          : Channels;
-      Process_Error : Integer);
-
-   procedure Emit_Stderr_Available (Self : Channels);
-   procedure Emit_Stdin_Available (Self : Channels);
-   procedure Emit_Stdout_Available (Self : Channels);
    procedure On_Close_Channels (Self : Channels);
 
    ------------------
@@ -148,56 +140,6 @@ package body Spawn.Channels is
       end if;
    end Close_Child_Descriptors;
 
-   -------------------------
-   -- Emit_Error_Occurred --
-   -------------------------
-
-   procedure Emit_Error_Occurred
-     (Self          : Channels;
-      Process_Error : Integer) is
-   begin
-      Self.Process.Listener.Error_Occurred (Process_Error);
-   exception
-      when others =>
-         null;
-   end Emit_Error_Occurred;
-
-   ---------------------------
-   -- Emit_Stderr_Available --
-   ---------------------------
-
-   procedure Emit_Stderr_Available (Self : Channels) is
-   begin
-      Self.Process.Listener.Standard_Error_Available;
-   exception
-      when others =>
-         null;
-   end Emit_Stderr_Available;
-
-   --------------------------
-   -- Emit_Stdin_Available --
-   --------------------------
-
-   procedure Emit_Stdin_Available (Self : Channels) is
-   begin
-      Self.Process.Listener.Standard_Input_Available;
-   exception
-      when others =>
-         null;
-   end Emit_Stdin_Available;
-
-   ---------------------------
-   -- Emit_Stdout_Available --
-   ---------------------------
-
-   procedure Emit_Stdout_Available (Self : Channels) is
-   begin
-      Self.Process.Listener.Standard_Output_Available;
-   exception
-      when others =>
-         null;
-   end Emit_Stdout_Available;
-
    ---------------
    -- Is_Active --
    ---------------
@@ -217,7 +159,7 @@ package body Spawn.Channels is
       if Self.Process.Pending_Finish then
          Self.Process.Pending_Finish := False;
 
-         Self.Process.Listener.Finished
+         Self.Process.Emit_Finished
            (Self.Process.Exit_Status, Self.Process.Exit_Code);
       end if;
    exception
@@ -242,7 +184,7 @@ package body Spawn.Channels is
       if (condition and Glib.IOChannel.G_Io_In) /= 0 then
          Self.Stderr_Lock := @ - 1;
 
-         Emit_Stderr_Available (Self);
+         Self.Process.Emit_Stderr_Available;
 
          if Self.Stderr_Lock = 0 then
             Self.Stderr_Event := Glib.Main.No_Source_Id;
@@ -278,7 +220,7 @@ package body Spawn.Channels is
    begin
       Self.Stdin_Lock := @ - 1;
 
-      Emit_Stdin_Available (Self);
+      Self.Process.Emit_Stdin_Available;
 
       if Self.Stdin_Lock = 0 then
          Self.Stdin_Event := Glib.Main.No_Source_Id;
@@ -304,7 +246,7 @@ package body Spawn.Channels is
       if (condition and Glib.IOChannel.G_Io_In) /= 0 then
          Self.Stdout_Lock := @ - 1;
 
-         Emit_Stdout_Available (Self);
+         Self.Process.Emit_Stdout_Available;
 
          if Self.Stdout_Lock = 0 then
             Self.Stdout_Event := Glib.Main.No_Source_Id;
@@ -382,8 +324,8 @@ package body Spawn.Channels is
             Start_Stderr_Watch (Self);
 
          when Glib.IOChannel.G_Io_Status_Error =>
-            Emit_Error_Occurred (Self,
-              Integer (Glib.Error.Get_Code (Error)));
+            Self.Process.Emit_Error_Occurred
+              (Integer (Glib.Error.Get_Code (Error)));
       end case;
    end Read_Stderr;
 
@@ -436,8 +378,8 @@ package body Spawn.Channels is
             Start_Stdout_Watch (Self);
 
          when Glib.IOChannel.G_Io_Status_Error =>
-            Emit_Error_Occurred (Self,
-              Integer (Glib.Error.Get_Code (Error)));
+            Self.Process.Emit_Error_Occurred
+              (Integer (Glib.Error.Get_Code (Error)));
       end case;
    end Read_Stdout;
 
@@ -509,8 +451,7 @@ package body Spawn.Channels is
          --  Create pipe
 
          if Spawn.Posix.pipe2 (Fds, Posix.O_CLOEXEC) /= 0 then
-            Emit_Error_Occurred (Self,
-              Integer (System.OS_Interface.errno));
+            Self.Process.Emit_Error_Occurred (GNAT.OS_Lib.Errno);
             Success := False;
 
             return;
@@ -533,8 +474,8 @@ package body Spawn.Channels is
             Glib.IOChannel.G_Io_Flag_Nonblock,
             Error'Access) /= Glib.IOChannel.G_Io_Status_Normal
          then
-            Emit_Error_Occurred (Self,
-              Integer (Glib.Error.Get_Code (Error)));
+            Self.Process.Emit_Error_Occurred
+              (Integer (Glib.Error.Get_Code (Error)));
             Cleanup;
             Success := False;
 
@@ -546,8 +487,8 @@ package body Spawn.Channels is
          if Glib.IOChannel.Set_Encoding (Read, "", Error'Access)
            /= Glib.IOChannel.G_Io_Status_Normal
          then
-            Emit_Error_Occurred (Self,
-              Integer (Glib.Error.Get_Code (Error)));
+            Self.Process.Emit_Error_Occurred
+              (Integer (Glib.Error.Get_Code (Error)));
             Cleanup;
             Success := False;
 
@@ -602,8 +543,7 @@ package body Spawn.Channels is
          --  Create pipe
 
          if Spawn.Posix.pipe2 (Fds, Posix.O_CLOEXEC) /= 0 then
-            Emit_Error_Occurred (Self,
-              Integer (System.OS_Interface.errno));
+            Self.Process.Emit_Error_Occurred (GNAT.OS_Lib.Errno);
             Success := False;
 
             return;
@@ -626,8 +566,8 @@ package body Spawn.Channels is
             Glib.IOChannel.G_Io_Flag_Nonblock,
             Error'Access) /= Glib.IOChannel.G_Io_Status_Normal
          then
-            Emit_Error_Occurred (Self,
-              Integer (Glib.Error.Get_Code (Error)));
+            Self.Process.Emit_Error_Occurred
+              (Integer (Glib.Error.Get_Code (Error)));
             Cleanup;
             Success := False;
 
@@ -639,8 +579,8 @@ package body Spawn.Channels is
          if Glib.IOChannel.Set_Encoding (Write, "", Error'Access)
            /= Glib.IOChannel.G_Io_Status_Normal
          then
-            Emit_Error_Occurred (Self,
-              Integer (Glib.Error.Get_Code (Error)));
+            Self.Process.Emit_Error_Occurred
+              (Integer (Glib.Error.Get_Code (Error)));
             Cleanup;
             Success := False;
 
@@ -706,9 +646,7 @@ package body Spawn.Channels is
              (Spawn.Posix.O_RDWR + Spawn.Posix.O_NOCTTY);
 
          if PTY_Master = -1 then
-            Emit_Error_Occurred (Self,
-              Integer (System.OS_Interface.errno));
-
+            Self.Process.Emit_Error_Occurred (GNAT.OS_Lib.Errno);
             Success := False;
 
             return;
@@ -721,8 +659,7 @@ package body Spawn.Channels is
            = -1
          then
             Cleanup;
-            Emit_Error_Occurred (Self,
-              Integer (System.OS_Interface.errno));
+            Self.Process.Emit_Error_Occurred (GNAT.OS_Lib.Errno);
             Success := False;
 
             return;
@@ -732,8 +669,7 @@ package body Spawn.Channels is
 
          if Spawn.Posix.grantpt (PTY_Master) /= 0 then
             Cleanup;
-            Emit_Error_Occurred (Self,
-              Integer (System.OS_Interface.errno));
+            Self.Process.Emit_Error_Occurred (GNAT.OS_Lib.Errno);
             Success := False;
 
             return;
@@ -743,8 +679,7 @@ package body Spawn.Channels is
 
          if Spawn.Posix.unlockpt (PTY_Master) /= 0 then
             Cleanup;
-            Emit_Error_Occurred (Self,
-              Integer (System.OS_Interface.errno));
+            Self.Process.Emit_Error_Occurred (GNAT.OS_Lib.Errno);
             Success := False;
 
             return;
@@ -758,7 +693,7 @@ package body Spawn.Channels is
 
          if Status /= 0 then
             Cleanup;
-            Emit_Error_Occurred (Self, Integer (Status));
+            Self.Process.Emit_Error_Occurred (Integer (Status));
             Success := False;
 
             return;
@@ -773,8 +708,7 @@ package body Spawn.Channels is
 
          if Self.PTY_Slave = -1 then
             Cleanup;
-            Emit_Error_Occurred (Self,
-              Integer (System.OS_Interface.errno));
+            Self.Process.Emit_Error_Occurred (GNAT.OS_Lib.Errno);
             Success := False;
 
             return;
@@ -795,8 +729,8 @@ package body Spawn.Channels is
             Glib.IOChannel.G_Io_Flag_Nonblock,
             Error'Access) /= Glib.IOChannel.G_Io_Status_Normal
          then
-            Emit_Error_Occurred (Self,
-              Integer (Glib.Error.Get_Code (Error)));
+            Self.Process.Emit_Error_Occurred
+              (Integer (Glib.Error.Get_Code (Error)));
             Cleanup;
             Success := False;
 
@@ -808,8 +742,8 @@ package body Spawn.Channels is
          if Glib.IOChannel.Set_Encoding (PTY_Channel, "", Error'Access)
            /= Glib.IOChannel.G_Io_Status_Normal
          then
-            Emit_Error_Occurred (Self,
-              Integer (Glib.Error.Get_Code (Error)));
+            Self.Process.Emit_Error_Occurred
+              (Integer (Glib.Error.Get_Code (Error)));
             Cleanup;
             Success := False;
 
@@ -1053,8 +987,8 @@ package body Spawn.Channels is
             Start_Stdin_Watch (Self);
 
          when Glib.IOChannel.G_Io_Status_Error =>
-            Emit_Error_Occurred (Self,
-              Integer (Glib.Error.Get_Code (Error)));
+            Self.Process.Emit_Error_Occurred
+              (Integer (Glib.Error.Get_Code (Error)));
 
          when others =>
             raise Program_Error;
