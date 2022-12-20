@@ -11,6 +11,7 @@ with Ada.Streams;
 with Glib.IOChannel;
 private with Glib.Main;
 
+with Spawn.Common;
 limited with Spawn.Internal;
 
 private package Spawn.Channels is
@@ -18,11 +19,13 @@ private package Spawn.Channels is
    type Channels (Process : not null access Spawn.Internal.Process'Class) is
      private;
 
+   type Pipe_Array is array (Spawn.Common.Standard_Pipe) of Glib.Gint;
+   --  File descriptors array
+
    procedure Setup_Channels
-     (Self                : in out Channels;
-      Standard_Input_PTY  : Boolean;
-      Standard_Output_PTY : Boolean;
-      Standard_Error_PTY  : Boolean);
+     (Self     : in out Channels;
+      Use_PTY  : Spawn.Common.Pipe_Flags;
+      Child    : out Pipe_Array);
 
    procedure Close_Child_Descriptors (Self : in out Channels);
 
@@ -33,12 +36,6 @@ private package Spawn.Channels is
    procedure Shutdown_Stdout (Self : in out Channels);
 
    procedure Shutdown_Stderr (Self : in out Channels);
-
-   function Child_Stdin (Self : Channels) return Glib.Gint;
-
-   function Child_Stdout (Self : Channels) return Glib.Gint;
-
-   function Child_Stderr (Self : Channels) return Glib.Gint;
 
    function PTY_Slave (Self : Channels) return Glib.Gint;
 

@@ -16,7 +16,6 @@ with Spawn.Environments.Internal;
 with Spawn.Posix;
 
 package body Spawn.Internal is
-   use all type Spawn.Common.Pipe_Kinds;
 
    type Process_Access is access all Process'Class;
 
@@ -132,15 +131,12 @@ package body Spawn.Internal is
       Error  : aliased Glib.Error.GError;
       Status : Glib.Gboolean;
       PTY    : aliased Glib.Gint;
+      Child  : Spawn.Channels.Pipe_Array;
 
    begin
       Self.Reference.Self := Self'Unchecked_Access;
       Prepare_Arguments (argv);
-      Spawn.Channels.Setup_Channels
-        (Self.Channels,
-         Self.Use_PTY (Stdin),
-         Self.Use_PTY (Stdout),
-         Self.Use_PTY (Stderr));
+      Spawn.Channels.Setup_Channels (Self.Channels, Self.Use_PTY, Child);
 
       PTY := Spawn.Channels.PTY_Slave (Self.Channels);
       Status :=
@@ -152,9 +148,9 @@ package body Spawn.Internal is
            Child_Setup       => Setup_Child_Process'Access,
            Data              => PTY'Unchecked_Access,
            Child_Pid         => pid'Access,
-           Stdin_Fd          => Spawn.Channels.Child_Stdin (Self.Channels),
-           Stdout_Fd         => Spawn.Channels.Child_Stdout (Self.Channels),
-           Stderr_Fd         => Spawn.Channels.Child_Stderr (Self.Channels),
+           Stdin_Fd          => Child (Spawn.Common.Stdin),
+           Stdout_Fd         => Child (Spawn.Common.Stdout),
+           Stderr_Fd         => Child (Spawn.Common.Stderr),
            Error             => Error'Access);
 
       Gtkada.Types.Free (argv);
