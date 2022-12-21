@@ -53,8 +53,8 @@ library project Spawn_Glib is
 
       when "Windows_NT" =>
          for Excluded_Source_Files use Common_Excluded &
-           ("spawn-channels.ads",
-            "spawn-channels.adb",
+           ("spawn-channels__glib_posix.ads",
+            "spawn-channels__glib_posix.adb",
             "pipe2.c",
             "posix_const.c");
    end case;
@@ -117,6 +117,10 @@ library project Spawn_Glib is
    package Naming is
       case OS_API is
          when "unix" | "osx" =>
+            for Spec ("Spawn.Channels")
+               use "spawn-channels__glib_posix.ads";
+            for Body ("Spawn.Channels")
+               use "spawn-channels__glib_posix.adb";
             for Spec ("Spawn.Internal")
                use "spawn-internal__glib_posix.ads";
             for Body ("Spawn.Internal")

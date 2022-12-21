@@ -14,9 +14,10 @@ with Interfaces.C.Strings;
 
 with GNAT.OS_Lib;
 
+with Spawn.Channels;
 with Spawn.Environments.Internal;
-with Spawn.Posix;
 with Spawn.Polls.POSIX_Polls;
+with Spawn.Posix;
 
 package body Spawn.Internal.Monitor is
    use type Interfaces.C.int;
@@ -63,11 +64,6 @@ package body Spawn.Internal.Monitor is
    Map : Process_Maps.Map;
 
    Pipe_Flags : constant Interfaces.C.int := Posix.O_CLOEXEC;
-
-   To_Event_Set : constant array (Spawn.Common.Pipe_Kinds) of
-     Spawn.Polls.Watch_Event_Set :=
-       (Spawn.Common.Stdin => Spawn.Polls.Output,
-        others             => Spawn.Polls.Input);
 
    protected SIGCHLD is
       entry Wait;
@@ -179,12 +175,9 @@ package body Spawn.Internal.Monitor is
 
    procedure Do_Close_Pipe
      (Self : Process_Access;
-      Kind : Common.Standard_Pipe)
-   is
-      Ignore : Interfaces.C.int;
+      Kind : Common.Standard_Pipe) is
    begin
-      Poll.Watch (Self.pipe (Kind), Spawn.Polls.Empty_Set, null);
-      Ignore := Posix.close (Self.pipe (Kind));
+      Spawn.Channels.Close_Parent_Descriptor (Self.Channels, Kind, Poll);
    end Do_Close_Pipe;
 
    -------------
@@ -233,10 +226,8 @@ package body Spawn.Internal.Monitor is
             when Close_Pipe =>
                Do_Close_Pipe (Command.Process, Command.Pipe);
             when Watch_Pipe =>
-               Poll.Watch
-                 (Value    => Command.Process.pipe (Command.Pipe),
-                  Events   => To_Event_Set (Command.Pipe),
-                  Listener => Polls.Listener_Access (Command.Process));
+               Spawn.Channels.Start_Watch
+                 (Command.Process.Channels, Command.Pipe, Poll);
          end case;
       end loop;
 
@@ -252,9 +243,7 @@ package body Spawn.Internal.Monitor is
       use type Interfaces.C.Strings.chars_ptr;
       use type Ada.Streams.Stream_Element_Offset;
 
-      use all type Posix.Pipe_Ends;
-
-      procedure Send_Errno with No_Return;
+      procedure Send_Errno_And_Exit with No_Return;
       --  Put errno into Launch pipe end abort process
       procedure Prepare_Arguments (argv : out Posix.chars_ptr_array);
       --  Allocate argumnets
@@ -288,20 +277,16 @@ package body Spawn.Internal.Monitor is
          argv (argv'Last) := Interfaces.C.Strings.Null_Ptr;
       end Prepare_Arguments;
 
-      std : array (Pipe_Kinds) of Posix.Fd_Pair;
-      Child_Ends : constant array (std'Range) of Posix.Pipe_Ends :=
-        (Stdin => Posix.Read_End, others => Posix.Write_End);
-      Parent_Ends : constant array (std'Range) of Posix.Pipe_Ends :=
-        (Stdin => Posix.Write_End, others => Posix.Read_End);
-      Dup : constant array (Stdin .. Stderr) of Interfaces.C.int := (0, 1, 2);
-      r : Interfaces.C.int;
-      pragma Unreferenced (r);
+      Child_Ends : Spawn.Channels.Pipe_Array;
+
+      Dup : constant array (Stdout .. Stdin) of Interfaces.C.int :=
+        (Stdin => 0, Stdout => 1, Stderr => 2);
 
       ----------------
       -- Send_Errno --
       ----------------
 
-      procedure Send_Errno is
+      procedure Send_Errno_And_Exit is
          count : Interfaces.C.size_t;
          pragma Unreferenced (count);
          errno : Integer;
@@ -310,11 +295,11 @@ package body Spawn.Internal.Monitor is
       begin
          errno := GNAT.OS_Lib.Errno;
          count := Posix.write
-           (std (Launch) (Child_Ends (Launch)),
+           (Child_Ends (Launch),
             Error_Dump,
             Error_Dump'Length);
          GNAT.OS_Lib.OS_Exit (127);
-      end Send_Errno;
+      end Send_Errno_And_Exit;
 
       pid  : Interfaces.C.int;
       dir  : Interfaces.C.Strings.chars_ptr :=
@@ -325,10 +310,14 @@ package body Spawn.Internal.Monitor is
       argv : Posix.chars_ptr_array (0 .. Natural (Self.Arguments.Length) + 1);
       envp : Posix.chars_ptr_array :=
         Spawn.Environments.Internal.Raw (Self.Environment);
+
+      Ok   : Boolean;
    begin
-      --  Create pipes for children's strio
-      if (for some X of std => Posix.pipe2 (X, Pipe_Flags) /= 0) then
-         Self.Emit_Error_Occurred (GNAT.OS_Lib.Errno);
+      --  Create pipes for children's stdio
+      Spawn.Channels.Setup_Channels
+        (Self.Channels, Self.Use_PTY, Child_Ends, Ok);
+
+      if not Ok then
          Interfaces.C.Strings.Free (dir);
          return;
       end if;
@@ -346,23 +335,27 @@ package body Spawn.Internal.Monitor is
          return;
       elsif pid = 0 then  --  Child process
          --  Close unused ends
-         if (for some X in std'Range =>
-               Posix.close (std (X) (Parent_Ends (X))) /= 0)
-         then
-            Send_Errno;
+         Spawn.Channels.Close_Parent_Descriptors (Self.Channels, Ok);
+
+         if not Ok then
+            Send_Errno_And_Exit;
          --  Copy fd to standard numbers
          elsif (for some X in Dup'Range =>
-                  Posix.dup2 (std (X) (Child_Ends (X)), Dup (X)) = -1)
+                  Posix.dup2 (Child_Ends (X), Dup (X)) = -1)
          then
-            Send_Errno;
+            Send_Errno_And_Exit;
          --  Change directory if needed
          elsif dir /= Interfaces.C.Strings.Null_Ptr
            and then Posix.chdir (dir) /= 0
          then
-            Send_Errno;
+            Send_Errno_And_Exit;
          else  --  Replace executable
-            r := Posix.execve (argv (0), argv, envp);
-            Send_Errno;
+            declare
+               Ignore : Interfaces.C.int;
+            begin
+               Ignore := Posix.execve (argv (0), argv, envp);
+               Send_Errno_And_Exit;
+            end;
          end if;
       end if;
 
@@ -372,20 +365,9 @@ package body Spawn.Internal.Monitor is
       Interfaces.C.Strings.Free (dir);
 
       --  Close unused ends
-      if (for some X in std'Range =>
-            Posix.close (std (X) (Child_Ends (X))) /= 0)
-      then
-         Self.Emit_Error_Occurred (GNAT.OS_Lib.Errno);
-         return;
-      end if;
+      Spawn.Channels.Close_Child_Descriptors (Self.Channels, Ok);
 
-      --  Make stdio non-blocking
-      if (for some X in Common.Standard_Pipe =>
-            Posix.fcntl
-              (std (X) (Parent_Ends (X)),
-               Posix.F_SETFL,
-               Posix.O_NONBLOCK) /= 0)
-      then
+      if not Ok then
          Self.Emit_Error_Occurred (GNAT.OS_Lib.Errno);
          return;
       end if;
@@ -393,14 +375,8 @@ package body Spawn.Internal.Monitor is
       Self.pid := pid;
       Map.Insert (pid, Self);
 
-      for X in Self.pipe'Range loop
-         Self.pipe (X) := std (X) (Parent_Ends (X));
-         if X /= Stdin then
-            Poll.Watch
-              (Value    => Self.pipe (X),
-               Events   => To_Event_Set (X),
-               Listener => Spawn.Polls.Listener_Access (Self));
-         end if;
+      for Kind in Launch .. Stderr loop
+         Spawn.Channels.Start_Watch (Self.Channels, Kind, Poll);
       end loop;
    end Start_Process;
 

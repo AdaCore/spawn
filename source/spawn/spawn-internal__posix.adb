@@ -8,8 +8,6 @@ pragma Warnings (Off, "internal GNAT unit");
 with System.OS_Interface;
 pragma Warnings (On);
 
-with GNAT.OS_Lib;
-
 with Spawn.Internal.Monitor;
 with Spawn.Posix;
 
@@ -37,10 +35,6 @@ package body Spawn.Internal is
       end "<";
 
    end Environments;
-
-   function Errno return Interfaces.C.int is
-     (Interfaces.C.int (GNAT.OS_Lib.Errno));
-   --  return errno, number of last error
 
    --------------------------
    -- Close_Standard_Error --
@@ -101,72 +95,6 @@ package body Spawn.Internal is
    procedure Loop_Cycle (Timeout : Duration)
      renames Spawn.Internal.Monitor.Loop_Cycle;
 
-   --------------
-   -- On_Event --
-   --------------
-
-   overriding procedure On_Event
-     (Self   : in out Process;
-      Poll   : Spawn.Polls.Poll_Access;
-      Value  : Spawn.Polls.Descriptor;
-      Events : Spawn.Polls.Event_Set)
-   is
-      use all type Spawn.Polls.Event;
-      use type Spawn.Polls.Descriptor;
-   begin
-      if Value = Self.pipe (Launch) then
-         if Events (Input) then
-            declare
-               use type Ada.Streams.Stream_Element_Offset;
-               use type Interfaces.C.size_t;
-
-               Count      : Interfaces.C.size_t;
-               errno      : Integer := 0;
-               Error_Data : Ada.Streams.Stream_Element_Array
-                 (1 .. errno'Size / 8)
-                 with Import, Convention => Ada, Address => errno'Address;
-            begin
-               Count := Posix.read (Value, Error_Data, Error_Data'Length);
-
-               if Count = Error_Data'Length then
-                  Self.Exit_Code := Process_Exit_Code (errno);
-               end if;
-            end;
-         end if;
-
-         if Events (Close) or Events (Error) then
-            if Self.Exit_Code = Process_Exit_Code'Last then
-               Self.Status := Running;
-               Self.Emit_Started;
-               Self.Emit_Stdin_Available;
-
-            else
-               Self.Emit_Error_Occurred (Integer (Self.Exit_Code));
-            end if;
-         end if;
-
-         declare
-            Error : constant Interfaces.C.int := Posix.close (Value);
-         begin
-            if Error /= 0 then
-               Self.Emit_Error_Occurred (Integer (Error));
-            end if;
-         end;
-      elsif Value = Self.pipe (Stdin) then
-         if Events (Output) then
-            Self.Emit_Stdin_Available;
-         end if;
-      elsif Value = Self.pipe (Stdout) then
-         if Events (Input) then
-            Self.Emit_Stdout_Available;
-         end if;
-      elsif Value = Self.pipe (Stderr) then
-         if Events (Input) then
-            Self.Emit_Stderr_Available;
-         end if;
-      end if;
-   end On_Event;
-
    -------------------------
    -- Read_Standard_Error --
    -------------------------
@@ -177,28 +105,18 @@ package body Spawn.Internal is
       Last : out Ada.Streams.Stream_Element_Offset)
    is
       use type Ada.Streams.Stream_Element_Offset;
-      use type Interfaces.C.size_t;
 
-      Count : Interfaces.C.size_t;
    begin
       if Self.Status /= Running then
          Last := Data'First - 1;
          return;
       end if;
 
-      Count := Posix.read (Self.pipe (Stderr), Data, Data'Length);
+      Spawn.Channels.Read (Self.Channels, Stderr, Data, Last);
 
-      if Count = Interfaces.C.size_t'Last then
-         if Errno in Posix.EAGAIN | Posix.EINTR then
-            Last := Data'First - 1;
-            Monitor.Enqueue
-              ((Monitor.Watch_Pipe, Self'Unchecked_Access, Stderr));
-         else
-            raise Program_Error with
-              "read error: " & GNAT.OS_Lib.Errno_Message;
-         end if;
-      else
-         Last := Data'First + Ada.Streams.Stream_Element_Offset (Count) - 1;
+      if Last = Data'First - 1 then
+         Monitor.Enqueue
+           ((Monitor.Watch_Pipe, Self'Unchecked_Access, Stderr));
       end if;
    end Read_Standard_Error;
 
@@ -212,28 +130,18 @@ package body Spawn.Internal is
       Last : out Ada.Streams.Stream_Element_Offset)
    is
       use type Ada.Streams.Stream_Element_Offset;
-      use type Interfaces.C.size_t;
 
-      Count : Interfaces.C.size_t;
    begin
       if Self.Status /= Running then
          Last := Data'First - 1;
          return;
       end if;
 
-      Count := Posix.read (Self.pipe (Stdout), Data, Data'Length);
+      Spawn.Channels.Read (Self.Channels, Stdout, Data, Last);
 
-      if Count = Interfaces.C.size_t'Last then
-         if Errno in Posix.EAGAIN | Posix.EINTR then
-            Last := Data'First - 1;
-            Monitor.Enqueue
-              ((Monitor.Watch_Pipe, Self'Unchecked_Access, Stdout));
-         else
-            raise Program_Error with
-              "read error: " & GNAT.OS_Lib.Errno_Message;
-         end if;
-      else
-         Last := Data'First + Ada.Streams.Stream_Element_Offset (Count) - 1;
+      if Last = Data'First - 1 then
+         Monitor.Enqueue
+           ((Monitor.Watch_Pipe, Self'Unchecked_Access, Stdout));
       end if;
    end Read_Standard_Output;
 
@@ -272,9 +180,6 @@ package body Spawn.Internal is
       Last : out Ada.Streams.Stream_Element_Offset)
    is
       use type Ada.Streams.Stream_Element_Offset;
-      use type Interfaces.C.size_t;
-
-      Count : Interfaces.C.size_t;
 
    begin
       if Self.Status /= Running then
@@ -282,22 +187,10 @@ package body Spawn.Internal is
          return;
       end if;
 
-      Count := Posix.write (Self.pipe (Stdin), Data, Data'Length);
-      Last := Data'First - 1;
+      Spawn.Channels.Write_Stdin (Self.Channels, Data, Last);
 
-      if Count = Interfaces.C.size_t'Last then
-         if Errno not in Posix.EAGAIN | Posix.EINTR then
-            raise Program_Error with
-              "write error: " & GNAT.OS_Lib.Errno_Message;
-         end if;
-
-      else
-         Last := Data'First + Ada.Streams.Stream_Element_Offset (Count) - 1;
-      end if;
-
-      if Count /= Data'Length then
-         Monitor.Enqueue
-           ((Monitor.Watch_Pipe, Self'Unchecked_Access, Stdin));
+      if Last /= Data'Length then
+         Monitor.Enqueue ((Monitor.Watch_Pipe, Self'Unchecked_Access, Stdin));
       end if;
    end Write_Standard_Input;
 

@@ -17,9 +17,9 @@ with Spawn.String_Vectors;
 private
 package Spawn.Common is
 
-   type Pipe_Kinds is (Launch, Stdin, Stdout, Stderr);
+   type Pipe_Kinds is (Launch, Stdout, Stderr, Stdin);
 
-   subtype Standard_Pipe is Pipe_Kinds range Stdin .. Stderr;
+   subtype Standard_Pipe is Pipe_Kinds range Stdout .. Stdin;
 
    type Pipe_Flags is array (Standard_Pipe) of Boolean;
 

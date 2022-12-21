@@ -10,7 +10,7 @@ with Ada.Streams;
 with Interfaces.C;
 
 with Spawn.Common;
-with Spawn.Polls;
+with Spawn.Channels;
 
 private package Spawn.Internal is
 
@@ -29,23 +29,9 @@ private package Spawn.Internal is
    type Pipe_Array is array (Pipe_Kinds) of Interfaces.C.int;
    --  File descriptors array
 
-   type Process is new Spawn.Common.Process
-     and Spawn.Polls.Listener with
-   record
-      pid   : Interfaces.C.int := 0;
-      pipe  : Pipe_Array := (others => 0);
-   end record;
+   type Process is new Spawn.Common.Process with private;
    --  Process implementation type provides the same interface as
    --  Spawn.Processes.Process type.
-
-   overriding procedure On_Event
-     (Self   : in out Process;
-      Poll   : Spawn.Polls.Poll_Access;
-      Value  : Spawn.Polls.Descriptor;
-      Events : Spawn.Polls.Event_Set);
-   --  The handler for a new activity on the pipe descriptor.
-
-   overriding procedure Finalize (Self : in out Process);
 
    procedure Start (Self : in out Process'Class);
    --  See documentation in Spawn.Processes.
@@ -82,5 +68,14 @@ private package Spawn.Internal is
       Data : out Ada.Streams.Stream_Element_Array;
       Last : out Ada.Streams.Stream_Element_Offset);
    --  See documentation in Spawn.Processes.
+
+private
+
+   type Process is new Spawn.Common.Process with record
+      pid      : Interfaces.C.int := 0;
+      Channels : aliased Spawn.Channels.Channels (Process'Unchecked_Access);
+   end record;
+
+   overriding procedure Finalize (Self : in out Process);
 
 end Spawn.Internal;

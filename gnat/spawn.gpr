@@ -32,7 +32,8 @@ library project Spawn is
    for Source_Dirs use ("../source/spawn");
    for Languages use ("Ada", "c");
 
-   Common_Excluded := ("spawn-channels.ads", "spawn-channels.adb");
+   Common_Excluded :=
+     ("spawn-channels__glib_posix.ads", "spawn-channels__glib_posix.adb");
 
    case OS_API is
       when "unix" =>
@@ -121,6 +122,10 @@ library project Spawn is
    package Naming is
       case OS_API is
          when "unix" | "osx" =>
+            for Spec ("Spawn.Channels")
+               use "spawn-channels__posix.ads";
+            for Body ("Spawn.Channels")
+               use "spawn-channels__posix.adb";
             for Spec ("Spawn.Internal")
                use "spawn-internal__posix.ads";
             for Body ("Spawn.Internal")
