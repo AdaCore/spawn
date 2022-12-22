@@ -182,16 +182,16 @@ package body Spawn.Internal is
       Data : Ada.Streams.Stream_Element_Array;
       Last : out Ada.Streams.Stream_Element_Offset)
    is
-      procedure On_No_Data;
+      procedure On_Has_Data;
 
-      ----------------
-      -- On_No_Data --
-      ----------------
+      -----------------
+      -- On_Has_Data --
+      -----------------
 
-      procedure On_No_Data is
+      procedure On_Has_Data is
       begin
          Monitor.Enqueue ((Monitor.Watch_Pipe, Self'Unchecked_Access, Stdin));
-      end On_No_Data;
+      end On_Has_Data;
 
    begin
       if Self.Status /= Running or Data'Length = 0 then
@@ -199,7 +199,7 @@ package body Spawn.Internal is
          return;
       end if;
 
-      Windows.Do_Write (Self, Data, Last, On_No_Data'Access);
+      Windows.Do_Write (Self, Data, Last, On_Has_Data'Access);
    end Write_Standard_Input;
 
 end Spawn.Internal;

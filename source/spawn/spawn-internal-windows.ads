@@ -23,10 +23,10 @@ package Spawn.Internal.Windows is
       Kind : Pipe_Kinds);
 
    procedure Do_Write
-     (Self       : in out Process'Class;
-      Data       : Ada.Streams.Stream_Element_Array;
-      Last       : out Ada.Streams.Stream_Element_Offset;
-      On_No_Data : access procedure);
+     (Self        : in out Process'Class;
+      Data        : Ada.Streams.Stream_Element_Array;
+      Last        : out Ada.Streams.Stream_Element_Offset;
+      On_Has_Data : access procedure);
 
    procedure Do_Read
      (Self       : in out Process'Class;

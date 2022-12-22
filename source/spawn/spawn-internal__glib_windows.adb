@@ -316,13 +316,13 @@ package body Spawn.Internal is
       Data : Ada.Streams.Stream_Element_Array;
       Last : out Ada.Streams.Stream_Element_Offset)
    is
-      procedure On_No_Data;
+      procedure On_Has_Data;
 
-      ----------------
-      -- On_No_Data --
-      ----------------
+      -----------------
+      -- On_Has_Data --
+      -----------------
 
-      procedure On_No_Data is
+      procedure On_Has_Data is
          use type Windows_API.BOOL;
          use type Ada.Streams.Stream_Element_Offset;
 
@@ -347,10 +347,10 @@ package body Spawn.Internal is
          if Ok = System.Win32.FALSE then
             Self.Emit_Error_Occurred (Integer (System.Win32.GetLastError));
          end if;
-      end On_No_Data;
+      end On_Has_Data;
 
    begin
-      Windows.Do_Write (Self, Data, Last, On_No_Data'Access);
+      Windows.Do_Write (Self, Data, Last, On_Has_Data'Access);
    end Write_Standard_Input;
 
 end Spawn.Internal;

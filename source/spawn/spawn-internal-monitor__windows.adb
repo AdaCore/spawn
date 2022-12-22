@@ -217,6 +217,8 @@ package body Spawn.Internal.Monitor is
             if Ok = System.Win32.FALSE then
                Process.Listener.Error_Occurred
                  (Integer (System.Win32.GetLastError));
+            else
+               Process.pipe (Kind).Waiting_IO := True;
             end if;
          when Stdin =>
             Last := Process.pipe (Kind).Last;
@@ -235,6 +237,8 @@ package body Spawn.Internal.Monitor is
             if Ok = System.Win32.FALSE then
                Process.Listener.Error_Occurred
                  (Integer (System.Win32.GetLastError));
+            else
+               Process.pipe (Kind).Waiting_IO := True;
             end if;
       end case;
    end Do_Watch_Pipe;

@@ -41,6 +41,8 @@ private package Spawn.Internal is
       Process      : access Spawn.Internal.Process'Class;
       Kind         : Pipe_Kinds;
       Handle       : Windows_API.HANDLE := System.Win32.INVALID_HANDLE_VALUE;
+      Waiting_IO   : Boolean := False;
+      --  ReadFileEx/WriteFileEx overlapped operation in progress
       Buffer       : Stream_Element_Buffer;
       Last         : Ada.Streams.Stream_Element_Count := 0 with Atomic;
       --  Last could be > Buffer'Last for Stdin that means 'send notification'
