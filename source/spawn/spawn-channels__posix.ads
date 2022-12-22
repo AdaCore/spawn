@@ -55,6 +55,8 @@ package Spawn.Channels is
       Data : out Ada.Streams.Stream_Element_Array;
       Last : out Ada.Streams.Stream_Element_Offset);
 
+   function Is_Active (Self : Channels) return Boolean;
+
 private
    Invalid : Interfaces.C.int := Interfaces.C.int'First;
 

@@ -225,7 +225,6 @@ package body Spawn.Internal is
       Glib.Spawn.Spawn_Close_Pid (pid);
 
       Self.Event  := Glib.Main.No_Source_Id;
-      Self.Status := Not_Running;
       Self.pid    := 0;
 
       if Glib.Spawn.Spawn_Check_Exit_Status
@@ -249,6 +248,7 @@ package body Spawn.Internal is
       end if;
 
       begin
+         Self.Status := Not_Running;
          Self.Emit_Finished (Self.Exit_Status, Self.Exit_Code);
 
       exception

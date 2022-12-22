@@ -163,9 +163,12 @@ package body Spawn.Internal.Monitor is
                   else Process_Exit_Code'Last);
          end case;
 
-         Process.Status := Not_Running;
-
-         Process.Emit_Finished (Process.Exit_Status, Process.Exit_Code);
+         if Spawn.Channels.Is_Active (Process.Channels) then
+            Process.Pending_Finish := True;
+         else
+            Process.Status := Not_Running;
+            Process.Emit_Finished (Process.Exit_Status, Process.Exit_Code);
+         end if;
       end if;
    end Check_Children;
 

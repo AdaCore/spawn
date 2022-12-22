@@ -125,6 +125,7 @@ package body Spawn.Channels is
    begin
       if Self.Process.Pending_Finish then
          Self.Process.Pending_Finish := False;
+         Self.Process.Status := Not_Running;
 
          Self.Process.Emit_Finished
            (Self.Process.Exit_Status, Self.Process.Exit_Code);

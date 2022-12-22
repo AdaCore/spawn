@@ -33,10 +33,8 @@ private package Spawn.Internal is
       Channels  : Spawn.Channels.Channels (Process'Unchecked_Access);
       Event     : Glib.Main.G_Source_Id := 0;
       pid       : Interfaces.C.int := 0;
-
-      Pending_Finish : Boolean := False;
-      --  We have got pid closed but channels are still active.
-      --  In this case delay Finished callback until channels are closed.
+      Dummy     : Interfaces.C.int := 0;
+      --  GtkAda declares (incorrectly?) GPid type as 64-bit integer
    end record;
 
    overriding procedure Finalize (Self : in out Process);

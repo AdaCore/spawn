@@ -117,6 +117,19 @@ package body Spawn.Channels is
       Close (Self.PTY_Master);
    end Close_Parent_Descriptors;
 
+   ---------------
+   -- Is_Active --
+   ---------------
+
+   function Is_Active (Self : Channels) return Boolean is
+      use type Interfaces.C.int;
+   begin
+      --  If a pipe is PTY, then we won't get close event on it
+      return not
+        (Self.Parent (Stdout) in Invalid | Self.PTY_Master
+         and Self.Parent (Stderr) in Invalid | Self.PTY_Master);
+   end Is_Active;
+
    --------------
    -- On_Event --
    --------------
@@ -129,6 +142,38 @@ package body Spawn.Channels is
    is
       use all type Spawn.Polls.Event;
       use type Spawn.Polls.Descriptor;
+
+      procedure Close (Pipe : in out Interfaces.C.int);
+      procedure On_Close_Channels;
+
+      -----------
+      -- Close --
+      -----------
+
+      procedure Close (Pipe : in out Interfaces.C.int) is
+         Error : constant Interfaces.C.int := Posix.close (Pipe);
+      begin
+         if Error /= 0 then
+            Self.Process.Emit_Error_Occurred (Integer (Error));
+         end if;
+
+         Pipe := Invalid;
+      end Close;
+
+      -----------------------
+      -- On_Close_Channels --
+      -----------------------
+
+      procedure On_Close_Channels is
+      begin
+         if Self.Process.Pending_Finish then
+            Self.Process.Pending_Finish := False;
+            Self.Process.Status := Not_Running;
+
+            Self.Process.Emit_Finished
+              (Self.Process.Exit_Status, Self.Process.Exit_Code);
+         end if;
+      end On_Close_Channels;
    begin
       if Value = Self.Parent (Launch) then
          if Events (Input) then
@@ -151,25 +196,26 @@ package body Spawn.Channels is
          end if;
 
          if Events (Close) or Events (Error) then
-            if Self.Process.Exit_Code = Process_Exit_Code'Last then
+            if Self.Process.Exit_Code /= Process_Exit_Code'Last then
+               Self.Process.Emit_Error_Occurred
+                 (Integer (Self.Process.Exit_Code));
+            elsif Self.Process.Status = Starting then
                Self.Process.Status := Running;
                Self.Process.Emit_Started;
                Self.Process.Emit_Stdin_Available;
-
-            else
-               Self.Process.Emit_Error_Occurred
-                 (Integer (Self.Process.Exit_Code));
             end if;
          end if;
 
-         declare
-            Error : constant Interfaces.C.int := Posix.close (Value);
-         begin
-            if Error /= 0 then
-               Self.Process.Emit_Error_Occurred (Integer (Error));
-            end if;
-         end;
+         Close (Self.Parent (Launch));
       else
+         if (Events (Input) or Events (Output)) and
+           Self.Process.Status = Starting
+         then
+            Self.Process.Status := Running;
+            Self.Process.Emit_Started;
+            Self.Process.Emit_Stdin_Available;
+         end if;
+
          --  Stdin, Stdout and Stderr could share the same FD for TTY, so
          --  check them all in conbinations
          if Value = Self.Parent (Stdin) and Events (Output) then
@@ -181,6 +227,23 @@ package body Spawn.Channels is
                Self.Process.Emit_Stdout_Available;
             elsif Value = Self.Parent (Stderr) then
                Self.Process.Emit_Stderr_Available;
+            end if;
+         end if;
+
+         if Events (Close) then
+            if Value = Self.Parent (Stdout) then
+               if Self.Parent (Stderr) in Value | Invalid then
+                  On_Close_Channels;
+                  Self.Parent (Stderr) := Invalid;
+               end if;
+
+               Close (Self.Parent (Stdout));
+            elsif Value = Self.Parent (Stderr) then
+               if Self.Parent (Stdout) = Invalid then
+                  On_Close_Channels;
+               end if;
+
+               Close (Self.Parent (Stderr));
             end if;
          end if;
       end if;

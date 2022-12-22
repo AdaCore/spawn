@@ -37,6 +37,10 @@ package Spawn.Common is
       Command     : Ada.Strings.Unbounded.Unbounded_String;
       Directory   : Ada.Strings.Unbounded.Unbounded_String;
       Use_PTY     : Pipe_Flags := (others => False);
+
+      Pending_Finish : Boolean := False;
+      --  We have got pid closed but channels are still active.
+      --  In this case delay Finished callback until channels are closed.
    end record;
 
    function Arguments (Self : Process'Class)
