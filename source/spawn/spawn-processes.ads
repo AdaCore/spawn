@@ -6,13 +6,11 @@
 
 --  Asynchronous process control API with listener pattern
 
-with Ada.Exceptions;
 with Ada.Streams;
-with Ada.Strings.Unbounded;
-with Interfaces;
 
 with Spawn.Environments;
 with Spawn.String_Vectors;
+with Spawn.Process_Listeners;
 
 private with Spawn.Internal;
 
@@ -42,68 +40,7 @@ package Spawn.Processes is
    --  read from and standard input stream to write. Corresponding events
    --  notify the listener when such calls are available.
 
-   type Process_Exit_Status is (Normal, Crash);
-   --  Process exit status
-   --  @value Normal   The normal process termination case
-   --  @value Crash    The abnormal process termination case
-
-   type Process_Exit_Code is new Interfaces.Unsigned_32;
-   --  Exit status reported by the child process on normal exit.
-   --  For crash the meaning depends on the OS.
-
-   type Process_Listener is limited interface;
-   --  A process status event listener.
-   type Process_Listener_Access is access all Process_Listener'Class;
-
-   procedure Standard_Output_Available
-    (Self : in out Process_Listener) is null;
-   --  Called once when it's possible to read data again.
-
-   procedure Standard_Error_Available
-    (Self : in out Process_Listener) is null;
-   --  Called once when it's possible to read data again.
-
-   procedure Standard_Input_Available
-    (Self : in out Process_Listener) is null;
-   --  Called once when it's possible to write data again.
-
-   procedure Started (Self : in out Process_Listener) is null;
-   --  Called when the process is started
-
-   procedure Finished
-    (Self        : in out Process_Listener;
-     Exit_Status : Process_Exit_Status;
-     Exit_Code   : Process_Exit_Code) is null;
-   --  Called when the process finishes. Exit_Status is exit status of the
-   --  process. On normal exit, Exit_Code is the exit code of the process,
-   --  on crash its meaning depends on the operating system. For POSIX systems
-   --  it is number of signal when available, on Windows it is process exit
-   --  code.
-
-   procedure Error_Occurred
-    (Self          : in out Process_Listener;
-     Process_Error : Integer) is null;
-
-   procedure Exception_Occurred
-     (Self       : in out Process_Listener;
-      Occurrence : Ada.Exceptions.Exception_Occurrence) is null;
-   --  This will be called when an exception occurred in one of the
-   --  callbacks set in place
-
    type Process_Error is (Failed_To_Start);
-
-   type Process_Status is
-    (Not_Running,
-     Starting,
-     Running);
-   --  Current process status.
-   --
-   --  @value Not_Running  The process has not been started yet or has been
-   --  exited/crashed already. Call Start to run it.
-   --
-   --  @value Starting     The process is launching, but it isn't run yet.
-   --
-   --  @value Running      The process is running.
 
    function Arguments (Self : Process'Class)
      return Spawn.String_Vectors.UTF_8_String_Vector;
@@ -179,10 +116,12 @@ package Spawn.Processes is
    --  On Windows, TerminateProcess() is called, and on POSIX, the SIGKILL
    --  signal is sent.
 
-   function Listener (Self : Process'Class) return Process_Listener_Access;
+   function Listener (Self : Process'Class)
+     return Spawn.Process_Listeners.Process_Listener_Access;
+
    procedure Set_Listener
      (Self     : in out Process'Class;
-      Listener : Process_Listener_Access)
+      Listener : Spawn.Process_Listeners.Process_Listener_Access)
         with Pre => Self.Status = Not_Running;
    --  Associate a Listener to this event. There may be either zero or one
    --  listener associated to each Process.
@@ -239,46 +178,44 @@ package Spawn.Processes is
    --  data was read, the Standard_Error_Available notification will be
    --  emitted later.
 
+   --  For compatibility with older API:
+   subtype Process_Listener is Spawn.Process_Listeners.Process_Listener;
+   subtype Process_Exit_Code is Spawn.Process_Exit_Code;
+   subtype Process_Exit_Status is Spawn.Process_Exit_Status;
+   subtype Process_Status is Spawn.Process_Status;
+
 private
 
-   use all type Internal.Pipe_Kinds;
-   subtype Pipe_Kinds is Internal.Pipe_Kinds;
-   subtype Standard_Pipe is Pipe_Kinds range Stdin .. Stderr;
-
-   type Pipe_Flags is array (Standard_Pipe) of Boolean;
-
-   type Process is new Spawn.Internal.Process with record
-      Arguments   : Spawn.String_Vectors.UTF_8_String_Vector;
-      Environment : Spawn.Environments.Process_Environment :=
-        Spawn.Environments.System_Environment;
-      Exit_Status : Process_Exit_Status := Normal;
-      Exit_Code   : Process_Exit_Code := Process_Exit_Code'Last;
-      Status      : Process_Status := Not_Running;
-
-      Listener    : Process_Listener_Access;
-      --  The associated listener. Note: this may be null.
-
-      Program     : Ada.Strings.Unbounded.Unbounded_String;
-      Directory   : Ada.Strings.Unbounded.Unbounded_String;
-      Use_PTY     : Pipe_Flags := (others => False);
-
-      Pending_Finish : Boolean := False;
-      --  We have got pid closed but channels are still active.
-      --  In this case delay Finished callback until channels are closed.
+   type Process is tagged limited record
+      Interal : Spawn.Internal.Process;
    end record;
 
-   overriding procedure Finalize (Self : in out Process);
+   function Arguments (Self : Process'Class)
+     return Spawn.String_Vectors.UTF_8_String_Vector is
+       (Self.Interal.Arguments);
 
-   overriding procedure Emit_Stdin_Available (Self : in out Process);
+   function Environment (Self : Process'Class)
+     return Spawn.Environments.Process_Environment is
+       (Self.Interal.Environment);
 
-   overriding procedure Emit_Stdout_Available (Self : in out Process);
+   function Working_Directory (Self : Process'Class) return UTF_8_String is
+     (Self.Interal.Working_Directory);
 
-   overriding procedure Emit_Stderr_Available (Self : in out Process);
+   function Program (Self : Process'Class) return UTF_8_String is
+     (Self.Interal.Program);
 
-   overriding procedure Emit_Error_Occurred
-     (Self  : in out Process;
-      Error : Integer);
+   function Status (Self : Process'Class) return Process_Status is
+     (Self.Interal.Status);
 
-   overriding procedure On_Close_Channels (Self : in out Process);
+   function Exit_Status (Self : Process'Class) return Process_Exit_Status is
+     (Self.Interal.Exit_Status);
+   --  Return the exit status of last process that finishes.
+
+   function Exit_Code (Self : Process'Class) return Process_Exit_Code is
+     (Self.Interal.Exit_Code);
+
+   function Listener (Self : Process'Class)
+     return Spawn.Process_Listeners.Process_Listener_Access is
+       (Self.Interal.Listener);
 
 end Spawn.Processes;

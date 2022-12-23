@@ -1,22 +1,28 @@
+--
+--  Copyright (C) 2018-2021, AdaCore
+--
+--  SPDX-License-Identifier: Apache-2.0
+--
+
+--  Call `/bin/stty' to check if TTY support works
+
 with Ada.Command_Line;
-with Ada.Directories;
+with Ada.Text_IO;
 with Ada.Streams;
 with Ada.Strings.Unbounded;
-with Ada.Text_IO;
+with Ada.Strings.Fixed;
 
-with Spawn.String_Vectors;
 with Spawn.Processes;
 with Spawn.Processes.Monitor_Loop;
+with Spawn.String_Vectors;
 
-with Signals;
-pragma Unreferenced (Signals);
-
-procedure Spawn_Kill is
+procedure Spawn_STTY is
    pragma Assertion_Policy (Check);
 
    package Listeners is
       type Listener is limited new Spawn.Processes.Process_Listener with record
-         Proc    : Spawn.Processes.Process;
+         Process : Spawn.Processes.Process;
+         Stdin   : Ada.Strings.Unbounded.Unbounded_String;
          Stdout  : Ada.Strings.Unbounded.Unbounded_String;
          Stderr  : Ada.Strings.Unbounded.Unbounded_String;
          Started : Boolean := False;
@@ -55,7 +61,7 @@ procedure Spawn_Kill is
                Data : Ada.Streams.Stream_Element_Array (1 .. 5);
                Last : Ada.Streams.Stream_Element_Count;
             begin
-               Self.Proc.Read_Standard_Output (Data, Last);
+               Self.Process.Read_Standard_Output (Data, Last);
 
                exit when Last < Data'First;
 
@@ -79,7 +85,7 @@ procedure Spawn_Kill is
                Data : Ada.Streams.Stream_Element_Array (1 .. 5);
                Last : Ada.Streams.Stream_Element_Count;
             begin
-               Self.Proc.Read_Standard_Error (Data, Last);
+               Self.Process.Read_Standard_Error (Data, Last);
 
                exit when Last < Data'First;
 
@@ -91,8 +97,6 @@ procedure Spawn_Kill is
                end loop;
             end;
          end loop;
-
-         Self.Proc.Close_Standard_Input;
       end Standard_Error_Available;
 
       overriding procedure Started (Self : in out Listener) is
@@ -108,7 +112,7 @@ procedure Spawn_Kill is
          use type Spawn.Processes.Process_Exit_Code;
 
       begin
-         if Exit_Code /= 9 then
+         if Exit_Code /= 0 then
             Ada.Text_IO.Put_Line ("Unexpected exit code" & (Exit_Code'Img));
             Ada.Command_Line.Set_Exit_Status (Ada.Command_Line.Failure);
          end if;
@@ -124,43 +128,26 @@ procedure Spawn_Kill is
          Ada.Text_IO.Put_Line ("Error_Occurred:" & (Process_Error'Img));
          Ada.Command_Line.Set_Exit_Status (Ada.Command_Line.Failure);
 
-         Self.Stopped := True;
          Self.Error := Process_Error;
+         Self.Stopped := True;
       end Error_Occurred;
 
    end Listeners;
 
-   Command : constant String := Ada.Directories.Full_Name
-     (Ada.Command_Line.Command_Name);
+   Command : constant String := "/bin/stty";
    Args : Spawn.String_Vectors.UTF_8_String_Vector;
-   L    : aliased Listeners.Listener;
+   L       : aliased Listeners.Listener;
+   P : Spawn.Processes.Process renames L.Process;
 begin
-   if Ada.Command_Line.Argument_Count > 0 then
-      Ada.Text_IO.Put_Line (Ada.Text_IO.Get_Line);
+   Args.Append ("--all");
 
-      return;
-   end if;
-
-   --  Otherwise launch a driven process.
-   Args.Append ("Wait for signal");
-
-   L.Proc.Set_Program (Command);
-   L.Proc.Set_Arguments (Args);
-   L.Proc.Set_Working_Directory (Ada.Directories.Current_Directory);
-   L.Proc.Set_Listener (L'Unchecked_Access);
-   L.Proc.Start;
-
-   while not L.Started loop
-      Spawn.Processes.Monitor_Loop (0.001);
-   end loop;
-
-   L.Proc.Terminate_Process;
-
-   while Ada.Strings.Unbounded.Length (L.Stdout) = 0 loop
-      Spawn.Processes.Monitor_Loop (0.001);
-   end loop;
-
-   L.Proc.Kill_Process;
+   P.Set_Standard_Input_PTY;
+   P.Set_Standard_Output_PTY;
+   P.Set_Standard_Error_PTY;
+   P.Set_Program (Command);
+   P.Set_Arguments (Args);
+   P.Set_Listener (L'Unchecked_Access);
+   P.Start;
 
    while not L.Stopped loop
       Spawn.Processes.Monitor_Loop (0.001);
@@ -170,9 +157,11 @@ begin
       Stdout : constant String := Ada.Strings.Unbounded.To_String (L.Stdout);
       Stderr : constant String := Ada.Strings.Unbounded.To_String (L.Stderr);
    begin
-      pragma Assert (Stdout = "Got TERM");
+      Ada.Text_IO.Put_Line (Stderr);
+      Ada.Text_IO.Put_Line (Stdout);
+      pragma Assert (Ada.Strings.Fixed.Count (Stdout, "speed") = 1);
       pragma Assert (Stderr = "");
       pragma Assert (L.Started);
       pragma Assert (L.Error = 0);
    end;
-end Spawn_Kill;
+end Spawn_STTY;

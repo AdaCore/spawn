@@ -200,7 +200,7 @@ begin
    P.Start;
 
    while not L.Stopped loop
-      Spawn.Processes.Monitor_Loop (1);
+      Spawn.Processes.Monitor_Loop (0.001);
    end loop;
 
    declare

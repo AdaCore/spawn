@@ -1,5 +1,5 @@
 --
---  Copyright (C) 2018-2019, AdaCore
+--  Copyright (C) 2018-2022, AdaCore
 --
 --  SPDX-License-Identifier: Apache-2.0
 --
@@ -10,7 +10,6 @@
 with Spawn.String_Vectors;
 
 private with Ada.Containers.Indefinite_Ordered_Maps;
-private with Spawn.Internal;
 
 package Spawn.Environments is
 
@@ -62,11 +61,14 @@ package Spawn.Environments is
 
 private
 
+   function Less (Left, Right : UTF_8_String) return Boolean;
+   function Equal (Left, Right : UTF_8_String) return Boolean;
+
    package UTF_8_String_Maps is new Ada.Containers.Indefinite_Ordered_Maps
      (Key_Type     => UTF_8_String,
       Element_Type => UTF_8_String,
-      "<"          => Spawn.Internal.Environments."<",
-      "="          => Spawn.Internal.Environments."=");
+      "<"          => Less,
+      "="          => Equal);  --  Spawn.Internal.Environments."=");
 
    type Process_Environment is tagged record
       Map : UTF_8_String_Maps.Map;

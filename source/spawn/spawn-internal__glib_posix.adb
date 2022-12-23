@@ -4,25 +4,24 @@
 --  SPDX-License-Identifier: Apache-2.0
 --
 
-with Interfaces.C;
-
 pragma Warnings (Off, "internal GNAT unit");
 with System.OS_Interface;
 pragma Warnings (On);
 
 with Glib.Error;
-with Glib.Main;
 with Glib.Spawn;
 with Gtkada.Types;
 
-with Spawn.Channels;
 with Spawn.Environments.Internal;
 with Spawn.Posix;
 
-separate (Spawn.Processes)
-package body Platform is
+package body Spawn.Internal is
 
-   procedure Do_Start_Process (Self : aliased in out Process'Class);
+   type Process_Access is access all Process'Class;
+
+   function Spawn_Async_With_Fds is
+     new Glib.Spawn.Generic_Spawn_Async_With_Fds
+       (User_Data => Glib.Gint);
 
    function Child_Watch is new Glib.Main.Generic_Child_Add_Watch
      (User_Data => Internal.Process_Reference);
@@ -33,16 +32,34 @@ package body Platform is
       data   : access Internal.Process_Reference)
         with Convention => C;
 
-   type Process_Access is access all Process'Class;
-
-   function Spawn_Async_With_Fds is
-     new Glib.Spawn.Generic_Spawn_Async_With_Fds
-       (User_Data => Glib.Gint);
+   procedure Do_Start_Process (Self : aliased in out Process'Class);
 
    procedure Setup_Child_Process (Fd : access Glib.Gint)
      with Convention => C;
    --  Setup session and controlling terminal when pseudoterminal is used
    --  for interprocess communication.
+
+   package body Environments is
+
+      ---------
+      -- "=" --
+      ---------
+
+      function "=" (Left, Right : UTF_8_String) return Boolean is
+      begin
+         return Standard."=" (Left, Right);
+      end "=";
+
+      ---------
+      -- "<" --
+      ---------
+
+      function "<" (Left, Right : UTF_8_String) return Boolean is
+      begin
+         return Standard."<" (Left, Right);
+      end "<";
+
+   end Environments;
 
    --------------------------
    -- Close_Standard_Error --
@@ -76,7 +93,6 @@ package body Platform is
    ----------------------
 
    procedure Do_Start_Process (Self : aliased in out Process'Class) is
-      use Ada.Strings.Unbounded;
       use Glib;
       use type Interfaces.C.size_t;
 
@@ -89,8 +105,7 @@ package body Platform is
 
       procedure Prepare_Arguments (argv : out Gtkada.Types.Chars_Ptr_Array) is
       begin
-         argv (0) := Gtkada.Types.New_String
-           (To_String (Self.Program));
+         argv (0) := Gtkada.Types.New_String (Self.Program);
 
          for J in 1 .. Self.Arguments.Last_Index loop
             argv (Interfaces.C.size_t (J)) := Gtkada.Types.New_String
@@ -100,10 +115,12 @@ package body Platform is
          argv (argv'Last) := Gtkada.Types.Null_Ptr;
       end Prepare_Arguments;
 
+      pid : aliased Glib.Spawn.GPid
+        with Import, Address => Self.pid'Address;
+
       dir  : Gtkada.Types.Chars_Ptr :=
-        (if Length (Self.Directory) = 0 then Gtkada.Types.Null_Ptr
-           else Gtkada.Types.New_String
-             (To_String (Self.Directory)));
+        (if Self.Working_Directory'Length = 0 then Gtkada.Types.Null_Ptr
+           else Gtkada.Types.New_String (Self.Working_Directory));
 
       argv : aliased Gtkada.Types.Chars_Ptr_Array :=
         (0 .. Interfaces.C.size_t (Self.Arguments.Length) + 1 => <>);
@@ -114,15 +131,12 @@ package body Platform is
       Error  : aliased Glib.Error.GError;
       Status : Glib.Gboolean;
       PTY    : aliased Glib.Gint;
+      Child  : Spawn.Channels.Pipe_Array;
 
    begin
       Self.Reference.Self := Self'Unchecked_Access;
       Prepare_Arguments (argv);
-      Spawn.Channels.Setup_Channels
-        (Self.Channels,
-         Self.Use_PTY (Stdin),
-         Self.Use_PTY (Stdout),
-         Self.Use_PTY (Stderr));
+      Spawn.Channels.Setup_Channels (Self.Channels, Self.Use_PTY, Child);
 
       PTY := Spawn.Channels.PTY_Slave (Self.Channels);
       Status :=
@@ -133,10 +147,10 @@ package body Platform is
            Flags             => Glib.Spawn.G_Spawn_Do_Not_Reap_Child,
            Child_Setup       => Setup_Child_Process'Access,
            Data              => PTY'Unchecked_Access,
-           Child_Pid         => Self.pid'Access,
-           Stdin_Fd          => Spawn.Channels.Child_Stdin (Self.Channels),
-           Stdout_Fd         => Spawn.Channels.Child_Stdout (Self.Channels),
-           Stderr_Fd         => Spawn.Channels.Child_Stderr (Self.Channels),
+           Child_Pid         => pid'Access,
+           Stdin_Fd          => Child (Spawn.Common.Stdin),
+           Stdout_Fd         => Child (Spawn.Common.Stdout),
+           Stderr_Fd         => Child (Spawn.Common.Stderr),
            Error             => Error'Access);
 
       Gtkada.Types.Free (argv);
@@ -147,18 +161,18 @@ package body Platform is
       if Status = 0 then
          Spawn.Channels.Shutdown_Channels (Self.Channels);
 
-         Self.Listener.Error_Occurred (Integer (Glib.Error.Get_Code (Error)));
+         Self.Emit_Error_Occurred (Integer (Glib.Error.Get_Code (Error)));
 
          return;
       end if;
 
       Self.Event := Child_Watch
-        (Self.pid,
+        (pid,
          My_Death_Callback'Access,
          Self.Reference'Access);
 
       Self.Status := Running;
-      Self.Listener.Started;
+      Self.Emit_Started;
 
       Spawn.Channels.Start_Watch (Self.Channels);
    end Do_Start_Process;
@@ -167,22 +181,11 @@ package body Platform is
    -- Finalize --
    --------------
 
-   procedure Finalize
-     (Self   : in out Process'Class;
-      Status : Process_Status)
-   is
-      pragma Unreferenced (Status);
-      use type Glib.Main.G_Source_Id;
+   overriding procedure Finalize (Self : in out Process) is
    begin
-      Spawn.Channels.Shutdown_Channels (Self.Channels);
-
-      if Self.Event /= Glib.Main.No_Source_Id then
-         Glib.Main.Remove (Self.Event);
-         Self.Event := Glib.Main.No_Source_Id;
+      if Self.Status = Running then
+         raise Program_Error;
       end if;
-
-      Glib.Spawn.Spawn_Close_Pid (Self.pid);
-      Self.pid := 0;
    end Finalize;
 
    ------------------
@@ -192,9 +195,9 @@ package body Platform is
    procedure Kill_Process (Self : in out Process'Class) is
       use type Interfaces.C.int;
 
-      Code : constant Interfaces.C.int := Spawn.Posix.kill
-        (Interfaces.C.int (Self.pid),
-         Interfaces.C.int (System.OS_Interface.SIGKILL));
+      Code : constant Interfaces.C.int :=
+        Spawn.Posix.kill
+          (Self.pid, Interfaces.C.int (System.OS_Interface.SIGKILL));
    begin
       pragma Assert (Code = 0);
    end Kill_Process;
@@ -222,7 +225,6 @@ package body Platform is
       Glib.Spawn.Spawn_Close_Pid (pid);
 
       Self.Event  := Glib.Main.No_Source_Id;
-      Self.Status := Not_Running;
       Self.pid    := 0;
 
       if Glib.Spawn.Spawn_Check_Exit_Status
@@ -246,7 +248,8 @@ package body Platform is
       end if;
 
       begin
-         Self.Listener.Finished (Self.Exit_Status, Self.Exit_Code);
+         Self.Status := Not_Running;
+         Self.Emit_Finished (Self.Exit_Status, Self.Exit_Code);
 
       exception
          when others =>
@@ -257,7 +260,7 @@ package body Platform is
 
    exception
       when E : others =>
-         Self.Listener.Exception_Occurred (E);
+         Self.Emit_Exception_Occurred (E);
    end My_Death_Callback;
 
    -------------------------
@@ -321,9 +324,9 @@ package body Platform is
    procedure Terminate_Process (Self : in out Process'Class) is
       use type Interfaces.C.int;
 
-      Code : constant Interfaces.C.int := Spawn.Posix.kill
-        (Interfaces.C.int (Self.pid),
-         Interfaces.C.int (System.OS_Interface.SIGTERM));
+      Code : constant Interfaces.C.int :=
+        Spawn.Posix.kill
+          (Self.pid, Interfaces.C.int (System.OS_Interface.SIGTERM));
    begin
       pragma Assert (Code = 0);
    end Terminate_Process;
@@ -340,4 +343,4 @@ package body Platform is
       Spawn.Channels.Write_Stdin (Self.Channels, Data, Last);
    end Write_Standard_Input;
 
-end Platform;
+end Spawn.Internal;

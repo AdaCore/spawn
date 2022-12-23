@@ -4,12 +4,11 @@
 --  SPDX-License-Identifier: Apache-2.0
 --
 
-procedure Spawn.Processes.Monitor_Loop (Timeout : Integer);
+procedure Spawn.Processes.Monitor_Loop (Timeout : Duration);
 --  Drive process control engine, deliver events, watch child processes, etc.
 --
---  Timeout to run in milliseconds. Don't wait if zero. Wait forever if < 0.
---  If there are some events then procedure will return before timeout
---  expires.
+--  Timeout to run. Don't wait if zero. If there are some events then procedure
+--  will return before timeout expires.
 --
 --  Note: This procedure is NOT thread-safe! In multi-tasking environment
 --  create a dedicated task to drive the engine.

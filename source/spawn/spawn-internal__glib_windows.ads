@@ -6,14 +6,16 @@
 
 with Ada.Finalization;
 with Ada.Streams;
---  with Interfaces.C;
 
 with Glib.Main;
+with Glib.Spawn;
 
 with Spawn.Windows_API;
 pragma Warnings (Off);
 with System.Win32;
 pragma Warnings (On);
+
+with Spawn.Common;
 
 private package Spawn.Internal is
 
@@ -32,13 +34,15 @@ private package Spawn.Internal is
    subtype Stream_Element_Buffer is
      Ada.Streams.Stream_Element_Array (1 .. Buffer_Size);
 
-   type Pipe_Kinds is (Stdin, Stdout, Stderr);
+   subtype Pipe_Kinds is Spawn.Common.Pipe_Kinds;
 
    type Context is record
       lpOverlapped : Windows_API.OVERLAPPED;
       Process      : access Spawn.Internal.Process'Class;
       Kind         : Pipe_Kinds;
       Handle       : Windows_API.HANDLE := System.Win32.INVALID_HANDLE_VALUE;
+      Waiting_IO   : Boolean := False;
+      --  ReadFileEx/WriteFileEx overlapped operation in progress
       Buffer       : Stream_Element_Buffer;
       Last         : Ada.Streams.Stream_Element_Count := 0 with Atomic;
       --  Last could be > Buffer'Last for Stdin that means 'send notification'
@@ -52,24 +56,51 @@ private package Spawn.Internal is
    end record;
    --  A wrapper to pass process pointer to C binding functions
 
-   type Process is
-     abstract new Ada.Finalization.Limited_Controlled with record
+   type Process is new Spawn.Common.Process with record
       Reference : aliased Process_Reference;
       Event     : Glib.Main.G_Source_Id := 0;
       pid       : aliased Windows_API.PROCESS_INFORMATION;
       pipe      : Pipe_Array;
    end record;
+   --  Process implementation type provides the same interface as
+   --  Spawn.Processes.Process type.
 
-   procedure Emit_Stdin_Available (Self : in out Process) is abstract;
+   overriding procedure Finalize (Self : in out Process);
 
-   procedure Emit_Stdout_Available (Self : in out Process) is abstract;
+   procedure Start (Self : in out Process'Class);
+   --  See documentation in Spawn.Processes.
 
-   procedure Emit_Stderr_Available (Self : in out Process) is abstract;
+   procedure Terminate_Process (Self : in out Process'Class);
+   --  See documentation in Spawn.Processes.
 
-   procedure Emit_Error_Occurred
-     (Self          : in out Process;
-      Process_Error : Integer) is abstract;
+   procedure Kill_Process (Self : in out Process'Class);
+   --  See documentation in Spawn.Processes.
 
-   procedure On_Close_Channels (Self : in out Process) is null;
+   procedure Close_Standard_Input (Self : in out Process'Class);
+   --  See documentation in Spawn.Processes.
+
+   procedure Write_Standard_Input
+     (Self : in out Process'Class;
+      Data : Ada.Streams.Stream_Element_Array;
+      Last : out Ada.Streams.Stream_Element_Offset);
+   --  See documentation in Spawn.Processes.
+
+   procedure Close_Standard_Output (Self : in out Process'Class);
+   --  See documentation in Spawn.Processes.
+
+   procedure Read_Standard_Output
+     (Self : in out Process'Class;
+      Data : out Ada.Streams.Stream_Element_Array;
+      Last : out Ada.Streams.Stream_Element_Offset);
+   --  See documentation in Spawn.Processes.
+
+   procedure Close_Standard_Error (Self : in out Process'Class);
+   --  See documentation in Spawn.Processes.
+
+   procedure Read_Standard_Error
+     (Self : in out Process'Class;
+      Data : out Ada.Streams.Stream_Element_Array;
+      Last : out Ada.Streams.Stream_Element_Offset);
+   --  See documentation in Spawn.Processes.
 
 end Spawn.Internal;

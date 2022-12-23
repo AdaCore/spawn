@@ -14,7 +14,7 @@ GPRINSTALL_FLAGS = --prefix=$(PREFIX) --sources-subdir=$(INSTALL_INCLUDE_DIR)\
 SPAWN_TESTS=.obj/spawn_test/spawn_test .obj/spawn_test/spawn_unexpected
 
 ifneq ($(OS),Windows_NT)
-   SPAWN_TESTS += .obj/spawn_test/spawn_kill
+   SPAWN_TESTS += .obj/spawn_test/spawn_kill .obj/spawn_test/spawn_stty
 endif
 
 all:

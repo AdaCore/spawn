@@ -32,15 +32,16 @@ library project Spawn is
    for Source_Dirs use ("../source/spawn");
    for Languages use ("Ada", "c");
 
-   Common_Excluded := ("spawn-channels.ads", "spawn-channels.adb");
+   Common_Excluded :=
+     ("spawn-channels__glib_posix.ads", "spawn-channels__glib_posix.adb");
 
    case OS_API is
       when "unix" =>
          for Excluded_Source_Files use Common_Excluded &
            ("pipe2.c",
             "spawn-windows_api.ads",
-            "spawn-processes-windows.ads",
-            "spawn-processes-windows.adb");
+            "spawn-internal-windows.ads",
+            "spawn-internal-windows.adb");
 
       when "Windows_NT" =>
          for Excluded_Source_Files use Common_Excluded &
@@ -50,8 +51,8 @@ library project Spawn is
       when "osx" =>
          for Excluded_Source_Files use Common_Excluded &
            ("spawn-windows_api.ads",
-            "spawn-processes-windows.ads",
-            "spawn-processes-windows.adb");
+            "spawn-internal-windows.ads",
+            "spawn-internal-windows.adb");
    end case;
 
    Ada_Switches := ();
@@ -121,6 +122,10 @@ library project Spawn is
    package Naming is
       case OS_API is
          when "unix" | "osx" =>
+            for Spec ("Spawn.Channels")
+               use "spawn-channels__posix.ads";
+            for Body ("Spawn.Channels")
+               use "spawn-channels__posix.adb";
             for Spec ("Spawn.Internal")
                use "spawn-internal__posix.ads";
             for Body ("Spawn.Internal")
@@ -131,14 +136,12 @@ library project Spawn is
                use "spawn-environments-internal__posix.ads";
             for Body ("Spawn.Environments.Internal")
                use "spawn-environments-internal__posix.adb";
-            for Body ("Spawn.Processes.Platform")
-               use "spawn-processes-platform__posix.adb";
             for Body ("Spawn.Environments.Search_In_Path")
                use "spawn-environments-search_in_path__posix.adb";
-            for Body ("Spawn.Processes.Monitor")
-               use "spawn-processes-monitor__posix.adb";
-            for Body ("Spawn.Processes.Monitor.Initialize")
-               use "spawn-processes-monitor-" & OS_API & "_initialize.adb";
+            for Body ("Spawn.Internal.Monitor")
+               use "spawn-internal-monitor__posix.adb";
+            for Body ("Spawn.Internal.Monitor.Initialize")
+               use "spawn-internal-monitor-" & OS_API & "_initialize.adb";
          when "Windows_NT" =>
             for Spec ("Spawn.Internal")
                use "spawn-internal__windows.ads";
@@ -150,12 +153,10 @@ library project Spawn is
                use "spawn-environments-internal__windows.ads";
             for Body ("Spawn.Environments.Internal")
                use "spawn-environments-internal__windows.adb";
-            for Body ("Spawn.Processes.Platform")
-               use "spawn-processes-platform__windows.adb";
             for Body ("Spawn.Environments.Search_In_Path")
                use "spawn-environments-search_in_path__windows.adb";
-            for Body ("Spawn.Processes.Monitor")
-               use "spawn-processes-monitor__windows.adb";
+            for Body ("Spawn.Internal.Monitor")
+               use "spawn-internal-monitor__windows.adb";
       end case;
    end Naming;
 

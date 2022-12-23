@@ -1,5 +1,5 @@
 --
---  Copyright (C) 2018-2021, AdaCore
+--  Copyright (C) 2018-2022, AdaCore
 --
 --  SPDX-License-Identifier: Apache-2.0
 --
@@ -8,6 +8,7 @@ with Ada.Characters.Wide_Latin_1;
 with Ada.Strings.UTF_Encoding.Wide_Strings;
 with Ada.Strings.Wide_Fixed;
 with Ada.Strings.Wide_Unbounded;
+with Ada.Strings.Unbounded;
 with Interfaces.C.Strings;
 
 pragma Warnings (Off);
@@ -17,7 +18,8 @@ pragma Warnings (On);
 
 with Spawn.Environments.Internal;
 
-package body Spawn.Processes.Windows is
+package body Spawn.Internal.Windows is
+   use all type Spawn.Common.Pipe_Kinds;
 
    Terminate_Code : constant Windows_API.UINT := 16#F291#;
    --  Arbitrary code to use as exit code for TerminateProcess call.
@@ -39,7 +41,7 @@ package body Spawn.Processes.Windows is
 
    procedure Append_Escaped_String
      (Command_Line : in out Ada.Strings.Wide_Unbounded.Unbounded_Wide_String;
-      Argument     : Ada.Strings.Unbounded.Unbounded_String);
+      Argument     : UTF_8_String);
    --  Append the given argument to a command line such that CommandLineToArgvW
    --  return the argument string unchanged. Arguments in a command line should
    --  be separated by spaces; this subprogram doesn't add these spaces.
@@ -64,7 +66,7 @@ package body Spawn.Processes.Windows is
 
    procedure Append_Escaped_String
      (Command_Line : in out Ada.Strings.Wide_Unbounded.Unbounded_Wide_String;
-      Argument     : Ada.Strings.Unbounded.Unbounded_String)
+      Argument     : UTF_8_String)
    is
       --  Implementation of the subprogram based on Microsoft's blog post
       --  "Everyone quotes command line arguments the wrong way".
@@ -78,9 +80,8 @@ package body Spawn.Processes.Windows is
         & Ada.Characters.Wide_Latin_1.HT
         & Ada.Characters.Wide_Latin_1.VT;
 
-      S : constant Wide_String :=
-        Ada.Strings.UTF_Encoding.Wide_Strings.Decode
-          (Ada.Strings.Unbounded.To_String (Argument));
+      S : constant Wide_String := Ada.Strings.UTF_Encoding.Wide_Strings.Decode
+        (Argument);
 
       J : Natural;  --  Iterator
       N : Natural;  --  Number of sequential backslashes.
@@ -184,17 +185,28 @@ package body Spawn.Processes.Windows is
          use type Windows_API.BOOL;
       begin
          if Value = System.Win32.FALSE then
-            Self.Listener.Error_Occurred
-              (Integer (System.Win32.GetLastError));
+            Self.Emit_Error_Occurred (Integer (System.Win32.GetLastError));
          end if;
       end Check_Error;
 
       Handle : Windows_API.HANDLE renames Self.pipe (Kind).Handle;
    begin
       if Handle /= System.Win32.INVALID_HANDLE_VALUE then
-         Check_Error (Windows_API.CancelIo (Self.pipe (Kind).Handle));
-         Check_Error (System.Win32.CloseHandle (Self.pipe (Kind).Handle));
-         Self.pipe (Kind).Handle := System.Win32.INVALID_HANDLE_VALUE;
+         if Self.pipe (Kind).Waiting_IO then
+            Check_Error (Windows_API.CancelIo (Self.pipe (Kind).Handle));
+         else
+            Check_Error (System.Win32.CloseHandle (Self.pipe (Kind).Handle));
+            Self.pipe (Kind).Handle := System.Win32.INVALID_HANDLE_VALUE;
+
+            if Self.Pending_Finish and then
+              (for all Pipe of Self.pipe =>
+                 Pipe.Handle = System.Win32.INVALID_HANDLE_VALUE)
+            then
+               Self.Pending_Finish := False;
+               Self.Status := Not_Running;
+               Self.Emit_Finished (Self.Exit_Status, Self.Exit_Code);
+            end if;
+         end if;
       end if;
    end Do_Close_Pipe;
 
@@ -255,7 +267,7 @@ package body Spawn.Processes.Windows is
       function Make_Command_Line return Interfaces.C.wchar_array;
       function Work_Directory return String;
       function Is_Error (Value : Windows_API.BOOL) return Boolean;
-      procedure Request_Read (Kind : Standard_Pipe);
+      procedure Request_Read (Kind : Spawn.Common.Standard_Pipe);
 
       procedure Create_Pipe
         (Parent_Handle : out Windows_API.HANDLE;
@@ -358,7 +370,7 @@ package body Spawn.Processes.Windows is
                   Attempts := Attempts - 1;
 
                   if Error /= Windows_API.ERROR_PIPE_BUSY or Attempts = 0 then
-                     Self.Listener.Error_Occurred (Integer (Error));
+                     Self.Emit_Error_Occurred (Integer (Error));
 
                      Interfaces.C.Strings.Free (Pipe_Name);
 
@@ -384,7 +396,7 @@ package body Spawn.Processes.Windows is
             hTemplateFile         => 0);
 
          if Child_Handle = System.Win32.INVALID_HANDLE_VALUE then
-            Self.Listener.Error_Occurred (Integer (System.Win32.GetLastError));
+            Self.Emit_Error_Occurred (Integer (System.Win32.GetLastError));
 
             Interfaces.C.Strings.Free (Pipe_Name);
             Ignore (System.Win32.CloseHandle (Parent_Handle));
@@ -430,7 +442,7 @@ package body Spawn.Processes.Windows is
                               System.OS_Interface.Wait_Infinite));
 
                      when others =>
-                        Self.Listener.Error_Occurred
+                        Self.Emit_Error_Occurred
                           (Integer (System.Win32.GetLastError));
 
                         Ignore (System.Win32.CloseHandle (Overlapped.hEvent));
@@ -459,7 +471,7 @@ package body Spawn.Processes.Windows is
       function Create_Pipes
         (Start : access Windows_API.STARTUPINFOW) return Boolean
       is
-         Child : constant array (Standard_Pipe) of
+         Child : constant array (Spawn.Common.Standard_Pipe) of
            not null access Windows_API.HANDLE :=
              (Stdin  => Start.hStdInput'Access,
               Stdout => Start.hStdOutput'Access,
@@ -467,7 +479,7 @@ package body Spawn.Processes.Windows is
 
          Ok : Boolean := True;
       begin
-         for J in Standard_Pipe loop
+         for J in Spawn.Common.Standard_Pipe loop
             Self.pipe (J).Process := Self'Unchecked_Access;
             Self.pipe (J).Kind := J;
             Create_Pipe
@@ -489,7 +501,7 @@ package body Spawn.Processes.Windows is
       function Is_Error (Value : Windows_API.BOOL) return Boolean is
       begin
          if Value = System.Win32.FALSE then
-            Self.Listener.Error_Occurred (Integer (System.Win32.GetLastError));
+            Self.Emit_Error_Occurred (Integer (System.Win32.GetLastError));
             return True;
          else
             return False;
@@ -508,8 +520,7 @@ package body Spawn.Processes.Windows is
 
          for Arg of Self.Arguments loop
             Ada.Strings.Wide_Unbounded.Append (Result, ' ');
-            Append_Escaped_String
-              (Result, Ada.Strings.Unbounded.To_Unbounded_String (Arg));
+            Append_Escaped_String (Result, Arg);
          end loop;
 
          return Interfaces.C.To_C
@@ -520,9 +531,9 @@ package body Spawn.Processes.Windows is
       -- Request_Read --
       ------------------
 
-      procedure Request_Read (Kind : Standard_Pipe) is
+      procedure Request_Read (Kind : Spawn.Common.Standard_Pipe) is
       begin
-         if Is_Error
+         if not Is_Error
            (Read_Write_Ex.ReadFileEx
               (hFile                => Self.pipe (Kind).Handle,
                lpBuffer             => Self.pipe (Kind).Buffer,
@@ -530,7 +541,7 @@ package body Spawn.Processes.Windows is
                lpOverlapped         => Self.pipe (Kind)'Access,
                lpCompletionRoutine  => Callback (Kind)))
          then
-            null;  --  then what?
+            Self.pipe (Kind).Waiting_IO := True;
          end if;
       end Request_Read;
 
@@ -552,8 +563,7 @@ package body Spawn.Processes.Windows is
 
       Exe : constant Interfaces.C.wchar_array :=
         Interfaces.C.To_C
-          (Ada.Strings.UTF_Encoding.Wide_Strings.Decode
-             (Ada.Strings.Unbounded.To_String (Self.Program)));
+          (Ada.Strings.UTF_Encoding.Wide_Strings.Decode (Self.Program));
 
       Args : Interfaces.C.wchar_array := Make_Command_Line;
 
@@ -589,8 +599,8 @@ package body Spawn.Processes.Windows is
       On_Start.all;
 
       Self.Status := Running;
-      Self.Listener.Started;
-      Self.Listener.Standard_Input_Available;
+      Self.Emit_Started;
+      Self.Emit_Stdin_Available;
       Request_Read (Stdout);
       Request_Read (Stderr);
    end Do_Start_Process;
@@ -617,10 +627,10 @@ package body Spawn.Processes.Windows is
    --------------
 
    procedure Do_Write
-     (Self       : in out Process'Class;
-      Data       : Ada.Streams.Stream_Element_Array;
-      Last       : out Ada.Streams.Stream_Element_Offset;
-      On_No_Data : access procedure)
+     (Self        : in out Process'Class;
+      Data        : Ada.Streams.Stream_Element_Array;
+      Last        : out Ada.Streams.Stream_Element_Offset;
+      On_Has_Data : access procedure)
    is
       use type Ada.Streams.Stream_Element_Count;
 
@@ -644,7 +654,7 @@ package body Spawn.Processes.Windows is
             Pipe.Last := Pipe.Last + Spawn.Internal.Buffer_Size;
          end if;
 
-         On_No_Data.all;
+         On_Has_Data.all;
 
       elsif Count in Internal.Stream_Element_Buffer'Range then
          --  Buffer is busy, mark stdin as 'send notification'
@@ -664,58 +674,49 @@ package body Spawn.Processes.Windows is
      (dwErrorCode               : Windows_API.DWORD;
       dwNumberOfBytesTransfered : Windows_API.DWORD;
       lpOverlapped              : access Internal.Context;
-      Kind                      : Standard_Pipe)
+      Kind                      : Spawn.Common.Standard_Pipe)
    is
       use type Windows_API.DWORD;
-      use type Windows_API.HANDLE;
       use type Ada.Streams.Stream_Element_Count;
 
-      Self : Process'Class renames
-        Process'Class (lpOverlapped.Process.all);
+      Self : Process'Class renames lpOverlapped.Process.all;
 
       Last : Ada.Streams.Stream_Element_Count := lpOverlapped.Last;
 
       Transfered : constant Ada.Streams.Stream_Element_Count :=
         Ada.Streams.Stream_Element_Count (dwNumberOfBytesTransfered);
+
+      Completed : constant Boolean :=
+        (if Kind = Stdin
+         then Transfered in Last | Last + Spawn.Internal.Buffer_Size
+         else Transfered > 0);  --  Should be True
    begin
-      if Self.pipe (Kind).Handle = System.Win32.INVALID_HANDLE_VALUE then
-         --  A user closed the pipe, but OS reports some IO on it
-         return;
+      Self.pipe (Kind).Waiting_IO := False;
+
+      if dwErrorCode = 0 and Completed then
+         case Kind is
+            when Stdin =>
+               lpOverlapped.Last := 0;
+
+               if Last not in lpOverlapped.Buffer'Range then
+                  Last := Last - Spawn.Internal.Buffer_Size;
+                  Self.Emit_Stdin_Available;
+               end if;
+
+            when Stderr =>
+               lpOverlapped.Last := Transfered;
+               Self.Emit_Stderr_Available;
+
+            when Stdout =>
+               lpOverlapped.Last := Transfered;
+               Self.Emit_Stdout_Available;
+         end case;
+      elsif dwErrorCode in 0 | Windows_API.ERROR_OPERATION_ABORTED then
+         Do_Close_Pipe (Self, Kind);
+      else
+         Self.Emit_Error_Occurred (Integer (dwErrorCode));
+         Do_Close_Pipe (Self, Kind);
       end if;
-
-      if dwErrorCode /= 0 then
-         if not (Self.Status = Not_Running
-                 and then dwErrorCode = Windows_API.ERROR_OPERATION_ABORTED)
-         then
-            Self.Listener.Error_Occurred (Integer (dwErrorCode));
-         end if;
-
-         return;
-      end if;
-
-      case Kind is
-         when Stdin =>
-            lpOverlapped.Last := 0;
-
-            if Last in lpOverlapped.Buffer'Range then
-               pragma Assert (Last = Transfered);
-
-            else
-               Last := Last - Spawn.Internal.Buffer_Size;
-               pragma Assert (Last = Transfered);
-
-               Self.Listener.Standard_Input_Available;
-            end if;
-            --  FIXME: what shall we do if Last /= Transfered?
-
-         when Stderr =>
-            lpOverlapped.Last := Transfered;
-            Self.Listener.Standard_Error_Available;
-
-         when Stdout =>
-            lpOverlapped.Last := Transfered;
-            Self.Listener.Standard_Output_Available;
-      end case;
    end IO_Callback;
 
    ---------------------
@@ -725,6 +726,7 @@ package body Spawn.Processes.Windows is
    procedure On_Process_Died (Self : in out Process'Class) is
 
       use type Windows_API.DWORD;
+      use type Windows_API.HANDLE;
 
       function Is_Error (Value : Windows_API.BOOL) return Boolean;
 
@@ -736,8 +738,7 @@ package body Spawn.Processes.Windows is
          use type Windows_API.BOOL;
       begin
          if Value = System.Win32.FALSE then
-            Self.Listener.Error_Occurred
-              (Integer (System.Win32.GetLastError));
+            Self.Emit_Error_Occurred (Integer (System.Win32.GetLastError));
             return True;
          else
             return False;
@@ -749,7 +750,7 @@ package body Spawn.Processes.Windows is
    begin
       --  Close stdio pipes
       for J in Self.pipe'Range loop
-         Windows.Do_Close_Pipe (Self, J);
+         Do_Close_Pipe (Self, J);
       end loop;
 
       if not Is_Error
@@ -804,9 +805,15 @@ package body Spawn.Processes.Windows is
             else Normal);
 
          Self.Exit_Code := Process_Exit_Code (Exit_Code);
-         Self.Status := Not_Running;
-         Self.Listener.Finished
-           (Self.Exit_Status, Self.Exit_Code);
+
+         if (for all Pipe of Self.pipe =>
+               Pipe.Handle = System.Win32.INVALID_HANDLE_VALUE)
+         then
+            Self.Status := Not_Running;
+            Self.Emit_Finished (Self.Exit_Status, Self.Exit_Code);
+         else
+            Self.Pending_Finish := True;
+         end if;
       end if;
    end On_Process_Died;
 
@@ -819,7 +826,7 @@ package body Spawn.Processes.Windows is
       dwNumberOfBytesTransfered : Windows_API.DWORD;
       lpOverlapped              : access Internal.Context) is
    begin
-      Windows.IO_Callback
+      IO_Callback
         (dwErrorCode, dwNumberOfBytesTransfered, lpOverlapped, Stderr);
    end Standard_Error_Callback;
 
@@ -832,8 +839,8 @@ package body Spawn.Processes.Windows is
       dwNumberOfBytesTransfered : Windows_API.DWORD;
       lpOverlapped              : access Internal.Context) is
    begin
-      Windows.IO_Callback
+      IO_Callback
         (dwErrorCode, dwNumberOfBytesTransfered, lpOverlapped, Stdout);
    end Standard_Output_Callback;
 
-end Spawn.Processes.Windows;
+end Spawn.Internal.Windows;

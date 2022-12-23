@@ -1,13 +1,14 @@
 --
---  Copyright (C) 2018-2021, AdaCore
+--  Copyright (C) 2018-2022, AdaCore
 --
 --  SPDX-License-Identifier: Apache-2.0
 --
 
 with Spawn.Windows_API;
+with Spawn.Common;
 
 private
-package Spawn.Processes.Windows is
+package Spawn.Internal.Windows is
 
    procedure Do_Start_Process
      (Self     : aliased in out Process'Class;
@@ -22,10 +23,10 @@ package Spawn.Processes.Windows is
       Kind : Pipe_Kinds);
 
    procedure Do_Write
-     (Self       : in out Process'Class;
-      Data       : Ada.Streams.Stream_Element_Array;
-      Last       : out Ada.Streams.Stream_Element_Offset;
-      On_No_Data : access procedure);
+     (Self        : in out Process'Class;
+      Data        : Ada.Streams.Stream_Element_Array;
+      Last        : out Ada.Streams.Stream_Element_Offset;
+      On_Has_Data : access procedure);
 
    procedure Do_Read
      (Self       : in out Process'Class;
@@ -40,7 +41,7 @@ package Spawn.Processes.Windows is
      (dwErrorCode               : Windows_API.DWORD;
       dwNumberOfBytesTransfered : Windows_API.DWORD;
       lpOverlapped              : access Internal.Context;
-      Kind                      : Standard_Pipe);
+      Kind                      : Spawn.Common.Standard_Pipe);
    --  Implementation shared between Standard_[Output/Error]_Callback
 
-end Spawn.Processes.Windows;
+end Spawn.Internal.Windows;

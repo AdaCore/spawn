@@ -1,8 +1,10 @@
 --
---  Copyright (C) 2018-2019, AdaCore
+--  Copyright (C) 2018-2022, AdaCore
 --
 --  SPDX-License-Identifier: Apache-2.0
 --
+
+private with Spawn.Internal;
 
 package body Spawn.Environments is
 
@@ -14,6 +16,12 @@ package body Spawn.Environments is
    --  Look for File in given list of directories
 
    Default : Process_Environment;
+
+   function Less (Left, Right : UTF_8_String) return Boolean
+     renames Spawn.Internal.Environments."<";
+
+   function Equal (Left, Right : UTF_8_String) return Boolean
+     renames Spawn.Internal.Environments."=";
 
    -----------
    -- Clear --

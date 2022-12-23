@@ -12,9 +12,8 @@ pragma Warnings (On);
 --  Ada 2022 features.
 
 with Interfaces.C;
-pragma Warnings (Off, "internal GNAT unit");
-with System.OS_Interface;
-pragma Warnings (On);
+
+with GNAT.OS_Lib;
 
 with Glib.Error;
 
@@ -77,38 +76,7 @@ package body Spawn.Channels is
      with Convention => C;
    --  Common code to start (continue) watching of the IO channel.
 
-   ------------------
-   -- Child_Stderr --
-   ------------------
-
-   function Child_Stderr (Self : Channels) return Glib.Gint is
-   begin
-      return
-        (if Self.Stderr_Child /= -1
-         then Self.Stderr_Child else Self.PTY_Slave);
-   end Child_Stderr;
-
-   -----------------
-   -- Child_Stdin --
-   -----------------
-
-   function Child_Stdin (Self : Channels) return Glib.Gint is
-   begin
-      return
-        (if Self.Stdin_Child /= -1
-           then Self.Stdin_Child else Self.PTY_Slave);
-   end Child_Stdin;
-
-   ------------------
-   -- Child_Stdout --
-   ------------------
-
-   function Child_Stdout (Self : Channels) return Glib.Gint is
-   begin
-      return
-        (if Self.Stdout_Child /= -1
-           then Self.Stdout_Child else Self.PTY_Slave);
-   end Child_Stdout;
+   procedure On_Close_Channels (Self : Channels);
 
    -----------------------------
    -- Close_Child_Descriptors --
@@ -149,6 +117,24 @@ package body Spawn.Channels is
         or Self.Stderr_Event /= Glib.Main.No_Source_Id;
    end Is_Active;
 
+   -----------------------
+   -- On_Close_Channels --
+   -----------------------
+
+   procedure On_Close_Channels (Self : Channels) is
+   begin
+      if Self.Process.Pending_Finish then
+         Self.Process.Pending_Finish := False;
+         Self.Process.Status := Not_Running;
+
+         Self.Process.Emit_Finished
+           (Self.Process.Exit_Status, Self.Process.Exit_Code);
+      end if;
+   exception
+      when others =>
+         null;
+   end On_Close_Channels;
+
    ---------------------
    -- On_Stderr_Event --
    ---------------------
@@ -178,7 +164,7 @@ package body Spawn.Channels is
          Self.Stderr_Event := Glib.Main.No_Source_Id;
 
          if Self.Stdout_Event = Glib.Main.No_Source_Id then
-            Self.Process.On_Close_Channels;
+            On_Close_Channels (Self);
          end if;
       end if;
 
@@ -240,7 +226,7 @@ package body Spawn.Channels is
          Self.Stdout_Event := Glib.Main.No_Source_Id;
 
          if Self.Stderr_Event = Glib.Main.No_Source_Id then
-            Self.Process.On_Close_Channels;
+            On_Close_Channels (Self);
          end if;
       end if;
 
@@ -370,21 +356,20 @@ package body Spawn.Channels is
    --------------------
 
    procedure Setup_Channels
-     (Self                : in out Channels;
-      Standard_Input_PTY  : Boolean;
-      Standard_Output_PTY : Boolean;
-      Standard_Error_PTY  : Boolean)
+     (Self     : in out Channels;
+      Use_PTY  : Spawn.Common.Pipe_Flags;
+      Child    : out Pipe_Array)
    is
 
       procedure Setup_Pipe
-        (Read    : out Glib.IOChannel.Giochannel;
-         Write   : out Glib.Gint;
+        (Kind    : Spawn.Posix.Pipe_Ends;
+         Parent  : out Glib.IOChannel.Giochannel;
+         Child   : out Glib.Gint;
          Success : in out Boolean);
-
-      procedure Setup_Pipe
-        (Read    : out Glib.Gint;
-         Write   : out Glib.IOChannel.Giochannel;
-         Success : in out Boolean);
+      --  Create a pipe of two file descriptors. Wrap one of them (according
+      --  to Kind) into a Giochannel and return as Parent. Return another as
+      --  Child. If something goes wrong emit Error_Occurred in the process
+      --  listener and change Success to False.
 
       procedure Setup_PTY (Success : in out Boolean);
 
@@ -395,8 +380,9 @@ package body Spawn.Channels is
       ----------------
 
       procedure Setup_Pipe
-        (Read    : out Glib.IOChannel.Giochannel;
-         Write   : out Glib.Gint;
+        (Kind    : Spawn.Posix.Pipe_Ends;
+         Parent  : out Glib.IOChannel.Giochannel;
+         Child   : out Glib.Gint;
          Success : in out Boolean)
       is
          use type Glib.IOChannel.GIOStatus;
@@ -412,19 +398,23 @@ package body Spawn.Channels is
             Ignore : Interfaces.C.int;
 
          begin
-            Glib.IOChannel.Unref (Read);
-            Ignore := Spawn.Posix.close (Interfaces.C.int (Write));
+            Glib.IOChannel.Unref (Parent);
+            Ignore := Spawn.Posix.close (Interfaces.C.int (Child));
 
-            Read  := null;
-            Write := -1;
+            Parent  := null;
+            Child := -1;
          end Cleanup;
 
          Fds   : Spawn.Posix.Fd_Pair;
          Error : aliased Glib.Error.GError;
 
+         Opposite_End : constant array (Spawn.Posix.Pipe_Ends)
+           of Spawn.Posix.Pipe_Ends :=
+             [Spawn.Posix.Read_End  => Spawn.Posix.Write_End,
+              Spawn.Posix.Write_End => Spawn.Posix.Read_End];
       begin
-         Read  := null;
-         Write := -1;
+         Parent  := null;
+         Child := -1;
 
          if not Success then
             return;
@@ -433,8 +423,7 @@ package body Spawn.Channels is
          --  Create pipe
 
          if Spawn.Posix.pipe2 (Fds, Posix.O_CLOEXEC) /= 0 then
-            Self.Process.Emit_Error_Occurred
-              (Integer (System.OS_Interface.errno));
+            Self.Process.Emit_Error_Occurred (GNAT.OS_Lib.Errno);
             Success := False;
 
             return;
@@ -443,17 +432,15 @@ package body Spawn.Channels is
          --  Create GIOChannel and move ownership of the file descriptor to
          --  the channel
 
-         Read :=
-           Glib.IOChannel.Giochannel_Unix_New
-             (Glib.Gint (Fds (Spawn.Posix.Read_End)));
-         Glib.IOChannel.Set_Close_On_Unref (Read, True);
+         Parent := Glib.IOChannel.Giochannel_Unix_New (Glib.Gint (Fds (Kind)));
+         Glib.IOChannel.Set_Close_On_Unref (Parent, True);
 
-         Write := Glib.Gint (Fds (Spawn.Posix.Write_End));
+         Child := Glib.Gint (Fds (Opposite_End (Kind)));
 
          --  Setup non-blocking mode for the channel
 
          if Glib.IOChannel.Set_Flags
-           (Read,
+           (Parent,
             Glib.IOChannel.G_Io_Flag_Nonblock,
             Error'Access) /= Glib.IOChannel.G_Io_Status_Normal
          then
@@ -467,7 +454,7 @@ package body Spawn.Channels is
 
          --  Setup null encoding
 
-         if Glib.IOChannel.Set_Encoding (Read, "", Error'Access)
+         if Glib.IOChannel.Set_Encoding (Parent, "", Error'Access)
            /= Glib.IOChannel.G_Io_Status_Normal
          then
             Self.Process.Emit_Error_Occurred
@@ -480,100 +467,7 @@ package body Spawn.Channels is
 
          --  Disable buffering.
 
-         Glib.IOChannel.Set_Buffered (Read, False);
-      end Setup_Pipe;
-
-      ----------------
-      -- Setup_Pipe --
-      ----------------
-
-      procedure Setup_Pipe
-        (Read    : out Glib.Gint;
-         Write   : out Glib.IOChannel.Giochannel;
-         Success : in out Boolean)
-      is
-         use type Glib.IOChannel.GIOStatus;
-
-         procedure Cleanup;
-         --  Close file descriptors and unreference channel.
-
-         -------------
-         -- Cleanup --
-         -------------
-
-         procedure Cleanup is
-            Ignore : Interfaces.C.int;
-
-         begin
-            Glib.IOChannel.Unref (Write);
-            Ignore := Spawn.Posix.close (Interfaces.C.int (Read));
-
-            Read  := -1;
-            Write := null;
-         end Cleanup;
-
-         Fds   : Spawn.Posix.Fd_Pair;
-         Error : aliased Glib.Error.GError;
-
-      begin
-         Read  := -1;
-         Write := null;
-
-         if not Success then
-            return;
-         end if;
-
-         --  Create pipe
-
-         if Spawn.Posix.pipe2 (Fds, Posix.O_CLOEXEC) /= 0 then
-            Self.Process.Emit_Error_Occurred
-              (Integer (System.OS_Interface.errno));
-            Success := False;
-
-            return;
-         end if;
-
-         --  Create GIOChannel and move ownership of the file descriptor to
-         --  the channel
-
-         Read := Glib.Gint (Fds (Spawn.Posix.Read_End));
-
-         Write :=
-           Glib.IOChannel.Giochannel_Unix_New
-             (Glib.Gint (Fds (Spawn.Posix.Write_End)));
-         Glib.IOChannel.Set_Close_On_Unref (Write, True);
-
-         --  Setup non-blocking mode for the channel
-
-         if Glib.IOChannel.Set_Flags
-           (Write,
-            Glib.IOChannel.G_Io_Flag_Nonblock,
-            Error'Access) /= Glib.IOChannel.G_Io_Status_Normal
-         then
-            Self.Process.Emit_Error_Occurred
-              (Integer (Glib.Error.Get_Code (Error)));
-            Cleanup;
-            Success := False;
-
-            return;
-         end if;
-
-         --  Setup null encoding
-
-         if Glib.IOChannel.Set_Encoding (Write, "", Error'Access)
-           /= Glib.IOChannel.G_Io_Status_Normal
-         then
-            Self.Process.Emit_Error_Occurred
-              (Integer (Glib.Error.Get_Code (Error)));
-            Cleanup;
-            Success := False;
-
-            return;
-         end if;
-
-         --  Disable buffering.
-
-         Glib.IOChannel.Set_Buffered (Write, False);
+         Glib.IOChannel.Set_Buffered (Parent, False);
       end Setup_Pipe;
 
       ---------------
@@ -630,9 +524,7 @@ package body Spawn.Channels is
              (Spawn.Posix.O_RDWR + Spawn.Posix.O_NOCTTY);
 
          if PTY_Master = -1 then
-            Self.Process.Emit_Error_Occurred
-              (Integer (System.OS_Interface.errno));
-
+            Self.Process.Emit_Error_Occurred (GNAT.OS_Lib.Errno);
             Success := False;
 
             return;
@@ -645,8 +537,7 @@ package body Spawn.Channels is
            = -1
          then
             Cleanup;
-            Self.Process.Emit_Error_Occurred
-              (Integer (System.OS_Interface.errno));
+            Self.Process.Emit_Error_Occurred (GNAT.OS_Lib.Errno);
             Success := False;
 
             return;
@@ -656,8 +547,7 @@ package body Spawn.Channels is
 
          if Spawn.Posix.grantpt (PTY_Master) /= 0 then
             Cleanup;
-            Self.Process.Emit_Error_Occurred
-              (Integer (System.OS_Interface.errno));
+            Self.Process.Emit_Error_Occurred (GNAT.OS_Lib.Errno);
             Success := False;
 
             return;
@@ -667,8 +557,7 @@ package body Spawn.Channels is
 
          if Spawn.Posix.unlockpt (PTY_Master) /= 0 then
             Cleanup;
-            Self.Process.Emit_Error_Occurred
-              (Integer (System.OS_Interface.errno));
+            Self.Process.Emit_Error_Occurred (GNAT.OS_Lib.Errno);
             Success := False;
 
             return;
@@ -697,8 +586,7 @@ package body Spawn.Channels is
 
          if Self.PTY_Slave = -1 then
             Cleanup;
-            Self.Process.Emit_Error_Occurred
-              (Integer (System.OS_Interface.errno));
+            Self.Process.Emit_Error_Occurred (GNAT.OS_Lib.Errno);
             Success := False;
 
             return;
@@ -747,42 +635,48 @@ package body Spawn.Channels is
 
       Success : Boolean := True;
 
+      use all type Spawn.Common.Pipe_Kinds;
+      use type Spawn.Common.Pipe_Flags;
    begin
-      if Standard_Input_PTY
-        or Standard_Output_PTY
-        or Standard_Error_PTY
-      then
+      if Use_PTY /= [Use_PTY'Range => False] then
          Setup_PTY (Success);
+         Child := [Child'Range => Self.PTY_Slave];
       end if;
 
-      if not Standard_Input_PTY then
+      if Use_PTY (Stdin) then
+         Self.Stdin_Parent := Glib.IOChannel.Ref (PTY_Channel);
+      else
          Setup_Pipe
-           (Self.Stdin_Child,
+           (Spawn.Posix.Write_End,
             Self.Stdin_Parent,
+            Self.Stdin_Child,
             Success);
 
-      else
-         Self.Stdin_Parent := Glib.IOChannel.Ref (PTY_Channel);
+         Child (Stdin) := Self.Stdin_Child;
       end if;
 
-      if not Standard_Output_PTY then
+      if Use_PTY (Stdout) then
+         Self.Stdout_Parent := Glib.IOChannel.Ref (PTY_Channel);
+      else
          Setup_Pipe
-           (Self.Stdout_Parent,
+           (Spawn.Posix.Read_End,
+            Self.Stdout_Parent,
             Self.Stdout_Child,
             Success);
 
-      else
-         Self.Stdout_Parent := Glib.IOChannel.Ref (PTY_Channel);
+         Child (Stdout) := Self.Stdout_Child;
       end if;
 
-      if not Standard_Error_PTY then
+      if Use_PTY (Stderr) then
+         Self.Stderr_Parent := Glib.IOChannel.Ref (PTY_Channel);
+      else
          Setup_Pipe
-           (Self.Stderr_Parent,
+           (Spawn.Posix.Read_End,
+            Self.Stderr_Parent,
             Self.Stderr_Child,
             Success);
 
-      else
-         Self.Stderr_Parent := Glib.IOChannel.Ref (PTY_Channel);
+         Child (Stderr) := Self.Stderr_Child;
       end if;
 
       if PTY_Channel /= null then
