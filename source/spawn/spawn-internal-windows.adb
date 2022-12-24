@@ -688,7 +688,7 @@ package body Spawn.Internal.Windows is
 
       Completed : constant Boolean :=
         (if Kind = Stdin
-         then Transfered in Last | Last + Spawn.Internal.Buffer_Size
+         then Transfered in Last | Last - Spawn.Internal.Buffer_Size
          else Transfered > 0);  --  Should be True
    begin
       Self.pipe (Kind).Waiting_IO := False;

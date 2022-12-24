@@ -139,7 +139,7 @@ procedure Spawn_STTY is
    L       : aliased Listeners.Listener;
    P : Spawn.Processes.Process renames L.Process;
 begin
-   Args.Append ("--all");
+   Args.Append ("-a");
 
    P.Set_Standard_Input_PTY;
    P.Set_Standard_Output_PTY;
