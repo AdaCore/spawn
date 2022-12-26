@@ -41,6 +41,8 @@ private package Spawn.Internal is
       Handle       : Windows_API.HANDLE := System.Win32.INVALID_HANDLE_VALUE;
       Waiting_IO   : Boolean := False;
       --  ReadFileEx/WriteFileEx overlapped operation in progress
+      Close_IO     : Boolean := False;
+      --  User closed the pipe while overlapped operation in progress
       Buffer       : Stream_Element_Buffer;
       Last         : Ada.Streams.Stream_Element_Count := 0;
       --  If Last = 0 that means the Buffer is free and no I/O operation in

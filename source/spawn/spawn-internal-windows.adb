@@ -193,6 +193,7 @@ package body Spawn.Internal.Windows is
    begin
       if Handle /= System.Win32.INVALID_HANDLE_VALUE then
          if Self.pipe (Kind).Waiting_IO then
+            Self.pipe (Kind).Close_IO := True;
             Check_Error (Windows_API.CancelIo (Self.pipe (Kind).Handle));
          else
             Check_Error (System.Win32.CloseHandle (Self.pipe (Kind).Handle));
@@ -711,6 +712,12 @@ package body Spawn.Internal.Windows is
                lpOverlapped.Last := Transfered;
                Self.Emit_Stdout_Available;
          end case;
+
+         if Self.pipe (Kind).Close_IO then
+            --  User's closed pipe, but dwErrorCode isn't set by CancelIo
+            Self.pipe (Kind).Close_IO := False;
+            Do_Close_Pipe (Self, Kind);
+         end if;
       elsif dwErrorCode in 0 | Windows_API.ERROR_OPERATION_ABORTED then
          Do_Close_Pipe (Self, Kind);
       else
