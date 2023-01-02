@@ -4,11 +4,9 @@
 --  SPDX-License-Identifier: Apache-2.0
 --
 
-with Ada.Finalization;
 with Ada.Streams;
 
 with Glib.Main;
-with Glib.Spawn;
 
 with Spawn.Windows_API;
 pragma Warnings (Off);
@@ -43,6 +41,8 @@ private package Spawn.Internal is
       Handle       : Windows_API.HANDLE := System.Win32.INVALID_HANDLE_VALUE;
       Waiting_IO   : Boolean := False;
       --  ReadFileEx/WriteFileEx overlapped operation in progress
+      Close_IO     : Boolean := False;
+      --  User closed the pipe while overlapped operation in progress
       Buffer       : Stream_Element_Buffer;
       Last         : Ada.Streams.Stream_Element_Count := 0 with Atomic;
       --  Last could be > Buffer'Last for Stdin that means 'send notification'

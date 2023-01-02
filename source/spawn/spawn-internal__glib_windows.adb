@@ -7,6 +7,8 @@
 with Ada.Strings.UTF_Encoding.Wide_Strings;
 with Ada.Wide_Characters.Unicode;
 
+with Glib.Spawn;
+
 with Spawn.Internal.Windows;
 
 package body Spawn.Internal is
@@ -324,7 +326,6 @@ package body Spawn.Internal is
 
       procedure On_Has_Data is
          use type Windows_API.BOOL;
-         use type Ada.Streams.Stream_Element_Offset;
 
          Ok   : Windows_API.BOOL;
          Pipe : Context renames Self.pipe (Stdin);
