@@ -182,10 +182,17 @@ package body Spawn.Internal is
    --------------
 
    overriding procedure Finalize (Self : in out Process) is
+      use type Glib.Main.G_Source_Id;
    begin
-      if Self.Status = Running then
-         raise Program_Error;
+      Spawn.Channels.Shutdown_Channels (Self.Channels);
+
+      if Self.Event /= Glib.Main.No_Source_Id then
+         Glib.Main.Remove (Self.Event);
+         Self.Event := Glib.Main.No_Source_Id;
       end if;
+
+      Glib.Spawn.Spawn_Close_Pid (Glib.Spawn.GPid (Self.pid));
+      Self.pid := 0;
    end Finalize;
 
    ------------------

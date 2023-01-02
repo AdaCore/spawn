@@ -45,7 +45,7 @@ make install DESTDIR=%{buildroot} LIBDIR=%{_libdir} PREFIX=%{_prefix} GPRDIR=%{_
 make  %{?_smp_mflags} GPRBUILD_FLAGS="%Gnatmake_optflags" check LIBRARY_TYPE=relocatable
 
 %files
-%doc COPYING{3,.RUNTIME}
+%doc LICENSE
 %dir %{_libdir}/%{name}
 %{_libdir}/%{name}/libspawn.so
 %{_libdir}/libspawn.so
