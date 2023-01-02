@@ -55,6 +55,8 @@ library project Spawn_Glib is
          for Excluded_Source_Files use Common_Excluded &
            ("spawn-channels__glib_posix.ads",
             "spawn-channels__glib_posix.adb",
+	    "spawn-polls-posix_polls.ads",
+	    "spawn-polls-posix_polls.adb",
             "pipe2.c",
             "posix_const.c");
    end case;
