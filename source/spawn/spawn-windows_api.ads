@@ -1,5 +1,5 @@
 --
---  Copyright (C) 2018-2021, AdaCore
+--  Copyright (C) 2018-2023, AdaCore
 --
 --  SPDX-License-Identifier: Apache-2.0
 --
@@ -62,7 +62,7 @@ package Spawn.Windows_API is
    type PROCESS_INFORMATION is record
       hProcess    : HANDLE;
       hThread     : HANDLE;
-      dwProcessId : DWORD;
+      dwProcessId : DWORD := 0;
       dwThreadId  : DWORD;
    end record
      with Convention => C;

@@ -1,5 +1,5 @@
 --
---  Copyright (C) 2018-2022, AdaCore
+--  Copyright (C) 2018-2023, AdaCore
 --
 --  SPDX-License-Identifier: Apache-2.0
 --
@@ -74,6 +74,9 @@ private package Spawn.Internal is
    --  See documentation in Spawn.Processes.
 
    procedure Kill_Process (Self : in out Process'Class);
+   --  See documentation in Spawn.Processes.
+
+   function Identifier (Self : Process'Class) return String;
    --  See documentation in Spawn.Processes.
 
    procedure Close_Standard_Input (Self : in out Process'Class);

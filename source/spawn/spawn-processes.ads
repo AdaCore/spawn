@@ -1,5 +1,5 @@
 --
---  Copyright (C) 2018-2022, AdaCore
+--  Copyright (C) 2018-2023, AdaCore
 --
 --  SPDX-License-Identifier: Apache-2.0
 --
@@ -116,6 +116,11 @@ package Spawn.Processes is
    --  On Windows, TerminateProcess() is called, and on POSIX, the SIGKILL
    --  signal is sent.
 
+   function Identifier (Self : Process'Class) return String;
+   --  Return process identifier (PID) image. It returns empty string until
+   --  the process starts. After that it returns identifier of the process,
+   --  even after process has been finished.
+
    function Listener (Self : Process'Class)
      return Spawn.Process_Listeners.Process_Listener_Access;
 
@@ -217,5 +222,8 @@ private
    function Listener (Self : Process'Class)
      return Spawn.Process_Listeners.Process_Listener_Access is
        (Self.Interal.Listener);
+
+   function Identifier (Self : Process'Class) return String is
+      (Spawn.Internal.Identifier (Self.Interal));
 
 end Spawn.Processes;

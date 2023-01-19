@@ -1,5 +1,5 @@
 --
---  Copyright (C) 2018-2022, AdaCore
+--  Copyright (C) 2018-2023, AdaCore
 --
 --  SPDX-License-Identifier: Apache-2.0
 --
@@ -73,6 +73,17 @@ package body Spawn.Internal is
          raise Program_Error;
       end if;
    end Finalize;
+
+   ----------------
+   -- Identifier --
+   ----------------
+
+   function Identifier (Self : Process'Class) return String is
+      use type Interfaces.C.int;
+      Image : constant String := Self.pid'Image;
+   begin
+      return (if Self.pid = 0 then "" else Image (2 .. Image'Last));
+   end Identifier;
 
    ------------------
    -- Kill_Process --
