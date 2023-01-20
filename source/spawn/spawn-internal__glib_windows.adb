@@ -1,5 +1,5 @@
 --
---  Copyright (C) 2018-2022, AdaCore
+--  Copyright (C) 2018-2023, AdaCore
 --
 --  SPDX-License-Identifier: Apache-2.0
 --
@@ -10,6 +10,7 @@ with Ada.Wide_Characters.Unicode;
 with Glib.Spawn;
 
 with Spawn.Internal.Windows;
+with Spawn.Windows_API;
 
 package body Spawn.Internal is
    use type Ada.Streams.Stream_Element_Offset;
@@ -199,6 +200,19 @@ package body Spawn.Internal is
          Self.Event := Glib.Main.No_Source_Id;
       end if;
    end Finalize;
+
+   ----------------
+   -- Identifier --
+   ----------------
+
+   function Identifier (Self : Process'Class) return String is
+      use type Spawn.Windows_API.DWORD;
+
+      Image : constant String := Self.pid.dwProcessId'Image;
+   begin
+      return (if Self.pid.dwProcessId = 0 then ""
+              else Image (2 .. Image'Last));
+   end Identifier;
 
    ------------------
    -- Kill_Process --
