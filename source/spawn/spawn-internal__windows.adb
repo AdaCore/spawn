@@ -9,7 +9,6 @@ with Ada.Wide_Characters.Unicode;
 
 with Spawn.Internal.Monitor;
 with Spawn.Internal.Windows;
-with Spawn.Windows_API;
 
 package body Spawn.Internal is
    use type Ada.Streams.Stream_Element_Offset;
