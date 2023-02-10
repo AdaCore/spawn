@@ -72,19 +72,19 @@ package body Spawn.Internal.Monitor is
         with Interrupt_Handler,
              Attach_Handler => Ada.Interrupts.Names.SIGCHLD;
    private
-      Fired : Natural := 0;
+      Fired : Boolean := False;
    end SIGCHLD;
 
    protected body SIGCHLD is
 
-      entry Wait when Fired > 0 is
+      entry Wait when Fired is
       begin
-         Fired := Fired - 1;
+         Fired := False;
       end Wait;
 
       procedure Handle is
       begin
-         Fired := Fired + 1;
+         Fired := True;
       end Handle;
 
    end SIGCHLD;
