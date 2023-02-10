@@ -139,37 +139,47 @@ package body Spawn.Internal.Monitor is
          return Imported (Status) /= 0;
       end WIFSIGNALED;
 
-      status : aliased Interfaces.C.unsigned := 0;
-      pid    : constant Interfaces.C.int :=
-        Posix.waitpid (-1, status'Unchecked_Access, Posix.WNOHANG);
-
-      Cursor  : constant Process_Maps.Cursor := Map.Find (pid);
+      status  : aliased Interfaces.C.unsigned := 0;
       Process : Process_Access;
 
    begin
-      if Process_Maps.Has_Element (Cursor) then
-         Process := Process_Maps.Element (Cursor);
+      loop
+         declare
+            pid : constant Interfaces.C.int :=
+              Posix.waitpid (-1, status'Unchecked_Access, Posix.WNOHANG);
 
-         Process.Exit_Status := (if WIFEXITED (status) then Normal else Crash);
+            Cursor : constant Process_Maps.Cursor := Map.Find (pid);
+         begin
+            exit when pid <= 0;  --  no more children change state
 
-         case Process.Exit_Status is
-            when Normal =>
-               Process.Exit_Code := Process_Exit_Code (WEXITSTATUS (status));
+            if Process_Maps.Has_Element (Cursor) then
+               Process := Process_Maps.Element (Cursor);
 
-            when Crash =>
-               Process.Exit_Code :=
-                 (if WIFSIGNALED (status)
-                  then Process_Exit_Code (WTERMSIG (status))
-                  else Process_Exit_Code'Last);
-         end case;
+               Process.Exit_Status :=
+                 (if WIFEXITED (status) then Normal else Crash);
 
-         if Spawn.Channels.Is_Active (Process.Channels) then
-            Process.Pending_Finish := True;
-         else
-            Process.Status := Not_Running;
-            Process.Emit_Finished (Process.Exit_Status, Process.Exit_Code);
-         end if;
-      end if;
+               case Process.Exit_Status is
+                  when Normal =>
+                     Process.Exit_Code :=
+                       Process_Exit_Code (WEXITSTATUS (status));
+
+                  when Crash =>
+                     Process.Exit_Code :=
+                       (if WIFSIGNALED (status)
+                        then Process_Exit_Code (WTERMSIG (status))
+                        else Process_Exit_Code'Last);
+               end case;
+
+               if Spawn.Channels.Is_Active (Process.Channels) then
+                  Process.Pending_Finish := True;
+               else
+                  Process.Status := Not_Running;
+                  Process.Emit_Finished
+                    (Process.Exit_Status, Process.Exit_Code);
+               end if;
+            end if;
+         end;
+      end loop;
    end Check_Children;
 
    -------------------
