@@ -11,10 +11,10 @@ GPRINSTALL_FLAGS = --prefix=$(PREFIX) --sources-subdir=$(INSTALL_INCLUDE_DIR)\
  --lib-subdir=$(INSTALL_ALI_DIR) --project-subdir=$(INSTALL_PROJECT_DIR)\
  --link-lib-subdir=$(INSTALL_LIBRARY_DIR)
 
-SPAWN_TESTS=.obj/spawn_test/spawn_test .obj/spawn_test/spawn_unexpected
+SPAWN_TESTS=spawn_test spawn_unexpected wait_all
 
 ifneq ($(OS),Windows_NT)
-   SPAWN_TESTS += .obj/spawn_test/spawn_kill .obj/spawn_test/spawn_stty
+   SPAWN_TESTS += spawn_kill spawn_stty
 endif
 
 all:
@@ -23,7 +23,7 @@ all:
 check:
 	export LD_LIBRARY_PATH=.libs/spawn/relocatable; \
 	for TEST in ${SPAWN_TESTS}; do \
-	  echo $$TEST; $$TEST; \
+	  echo $$TEST; .obj/spawn_test/$$TEST; \
 	done
 
 install:

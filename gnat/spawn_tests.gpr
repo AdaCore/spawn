@@ -8,7 +8,9 @@ with "spawn";
 
 project Spawn_Tests is
 
-   Main := ("spawn_test.adb", "spawn_unexpected.adb", "spawn_stty.adb");
+   Main :=
+     ("spawn_test.adb", "spawn_unexpected.adb", "spawn_stty.adb",
+      "wait_all.adb");
 
    case Spawn.OS_API is
       when "unix" | "osx" =>
