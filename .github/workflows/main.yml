@@ -17,14 +17,14 @@ jobs:
               echo "OS=osx" >> $GITHUB_ENV
           fi
       - name: Get Spawn
-        uses: actions/checkout@v2
-      - uses: actions/cache@v2
+        uses: actions/checkout@v3
+      - uses: actions/cache@v3
         with:
           path: ./cached_gnat
           key: ${{ runner.os }}-alire-v1
           restore-keys: ${{ runner.os }}-alire-v1
       - name: Get GNAT toolchain with alire
-        uses: alire-project/setup-alire@v1
+        uses: alire-project/setup-alire@v2
         with:
           toolchain: gnat_native^11 gprbuild^21
           toolchain_dir: ./cached_gnat
