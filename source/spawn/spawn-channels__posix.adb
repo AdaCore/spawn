@@ -122,7 +122,6 @@ package body Spawn.Channels is
    ---------------
 
    function Is_Active (Self : Channels) return Boolean is
-      use type Interfaces.C.int;
    begin
       --  If a pipe is PTY, then we won't get close event on it
       return not
@@ -146,6 +145,9 @@ package body Spawn.Channels is
       procedure Close (Pipe : in out Interfaces.C.int);
       procedure On_Close_Channels;
 
+      Process : not null access Spawn.Internal.Process'Class renames
+        Self.Process;
+
       -----------
       -- Close --
       -----------
@@ -154,7 +156,7 @@ package body Spawn.Channels is
          Error : constant Interfaces.C.int := Posix.close (Pipe);
       begin
          if Error /= 0 then
-            Self.Process.Emit_Error_Occurred (Integer (Error));
+            Process.Emit_Error_Occurred (Integer (Error));
          end if;
 
          Pipe := Invalid;
@@ -166,12 +168,16 @@ package body Spawn.Channels is
 
       procedure On_Close_Channels is
       begin
-         if Self.Process.Pending_Finish then
-            Self.Process.Pending_Finish := False;
-            Self.Process.Status := Not_Running;
+         if Process.Pending_Finish then
+            Process.Pending_Finish := False;
+            Process.Status := Not_Running;
 
-            Self.Process.Emit_Finished
-              (Self.Process.Exit_Status, Self.Process.Exit_Code);
+            if Process.Pending_Error = 0 then
+               Process.Emit_Finished
+                 (Process.Exit_Status, Process.Exit_Code);
+            else
+               Process.Emit_Error_Occurred (Process.Pending_Error);
+            end if;
          end if;
       end On_Close_Channels;
    begin
@@ -185,67 +191,62 @@ package body Spawn.Channels is
                errno      : Integer := 0;
                Error_Data : Ada.Streams.Stream_Element_Array
                  (1 .. errno'Size / 8)
-                 with Import, Convention => Ada, Address => errno'Address;
+                   with Import, Convention => Ada, Address => errno'Address;
             begin
                Count := Posix.read (Value, Error_Data, Error_Data'Length);
 
                if Count = Error_Data'Length then
-                  Self.Process.Exit_Code := Process_Exit_Code (errno);
+                  Process.Pending_Error := errno;
                end if;
             end;
          end if;
 
          if Events (Close) or Events (Error) then
-            if Self.Process.Exit_Code /= Process_Exit_Code'Last then
-               Self.Process.Emit_Error_Occurred
-                 (Integer (Self.Process.Exit_Code));
-            elsif Self.Process.Status = Starting then
-               Self.Process.Status := Running;
-               Self.Process.Emit_Started;
-               Self.Process.Emit_Stdin_Available;
+            if Process.Pending_Error = 0 and Process.Status = Starting then
+               Process.Status := Running;
+               Process.Emit_Started;
+               Process.Emit_Stdin_Available;
             end if;
          end if;
 
          Close (Self.Parent (Launch));
       else
-         if (Events (Input) or Events (Output)) and
-           Self.Process.Status = Starting
-         then
-            Self.Process.Status := Running;
-            Self.Process.Emit_Started;
-            Self.Process.Emit_Stdin_Available;
-         end if;
-
          --  Stdin, Stdout and Stderr could share the same FD for TTY, so
          --  check them all in conbinations
-         if Value = Self.Parent (Stdin) and Events (Output) then
-            Self.Process.Emit_Stdin_Available;
+
+         if (Events (Input) or Events (Output)) and
+           Process.Status = Starting
+         then
+            Process.Status := Running;
+            Process.Emit_Started;
+            Process.Emit_Stdin_Available;
+
+         elsif Value = Self.Parent (Stdin) and Events (Output) then
+            Process.Emit_Stdin_Available;
          end if;
 
          if Events (Input) then
             if Value = Self.Parent (Stdout) then
-               Self.Process.Emit_Stdout_Available;
+               Process.Emit_Stdout_Available;
             elsif Value = Self.Parent (Stderr) then
-               Self.Process.Emit_Stderr_Available;
+               Process.Emit_Stderr_Available;
             end if;
          end if;
 
          if Events (Close) then
             if Value = Self.Parent (Stdout) then
-               if Self.Parent (Stderr) in Value | Invalid then
-                  On_Close_Channels;
-                  Self.Parent (Stderr) := Invalid;
-               end if;
-
                Close (Self.Parent (Stdout));
             elsif Value = Self.Parent (Stderr) then
-               if Self.Parent (Stdout) = Invalid then
-                  On_Close_Channels;
-               end if;
-
                Close (Self.Parent (Stderr));
             end if;
          end if;
+      end if;
+
+      if Events (Close)
+        and then (for all X in Launch .. Stderr => Self.Parent (X) = Invalid)
+      then
+         --  If we have closed the last input channel then check pending death
+         On_Close_Channels;
       end if;
    end On_Event;
 

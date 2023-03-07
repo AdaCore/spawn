@@ -41,6 +41,8 @@ package Spawn.Common is
       Pending_Finish : Boolean := False;
       --  We have got pid closed but channels are still active.
       --  In this case delay Finished callback until channels are closed.
+      Pending_Error : Integer := 0;
+      --  If this is /= 0, then the start has been failed with given code.
    end record;
 
    function Arguments (Self : Process'Class)

@@ -172,10 +172,13 @@ package body Spawn.Internal.Monitor is
 
                if Spawn.Channels.Is_Active (Process.Channels) then
                   Process.Pending_Finish := True;
-               else
+               elsif Process.Pending_Error = 0 then
                   Process.Status := Not_Running;
                   Process.Emit_Finished
                     (Process.Exit_Status, Process.Exit_Code);
+               else
+                  Process.Status := Not_Running;
+                  Process.Emit_Error_Occurred (Process.Pending_Error);
                end if;
             end if;
          end;

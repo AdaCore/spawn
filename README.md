@@ -62,6 +62,13 @@ The listener will get these events:
 
 See an example in the [spawn test](testsuite/spawn/spawn_test.adb)
 
+### State diagram
+Next diagram shows process states and emited events during its life:
+
+![state diagram](docs/README.png "state diagram")
+
+You should NOT finalize process object until it in `Not_Running` state.
+
 ## Maintainer
 
 [AdaCore](https://github.com/AdaCore/)
