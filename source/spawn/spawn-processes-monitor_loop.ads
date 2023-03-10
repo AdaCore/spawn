@@ -1,7 +1,7 @@
 --
 --  Copyright (C) 2018-2021, AdaCore
 --
---  SPDX-License-Identifier: Apache-2.0
+--  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 --
 
 procedure Spawn.Processes.Monitor_Loop (Timeout : Duration);
