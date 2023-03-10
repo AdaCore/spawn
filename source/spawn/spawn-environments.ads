@@ -1,7 +1,7 @@
 --
 --  Copyright (C) 2018-2022, AdaCore
 --
---  SPDX-License-Identifier: Apache-2.0
+--  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 --
 
 --  Notes about names of variables: its case sensitivity is platform dependent.
