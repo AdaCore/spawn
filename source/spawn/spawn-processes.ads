@@ -141,14 +141,18 @@ package Spawn.Processes is
    --  Do nothing if Self.Status /= Running
 
    procedure Write_Standard_Input
-     (Self : in out Process'Class;
-      Data : Ada.Streams.Stream_Element_Array;
-      Last : out Ada.Streams.Stream_Element_Offset);
-   --  Do nothing if Self.Status /= Running. Last is set to index of the last
-   --  element to be written. If Last < Data'Last it means incomplete
+     (Self    : in out Process'Class;
+      Data    : Ada.Streams.Stream_Element_Array;
+      Last    : out Ada.Streams.Stream_Element_Offset;
+      Success : in out Boolean);
+   --  Do nothing if Self.Status /= Running. Last is set to index of the
+   --  last element to be written. If Last < Data'Last it means incomplete
    --  operation, Standard_Input_Available notification will be called once
    --  operation can be continued. Application is responsible to call this
-   --  subprogram again for remaining data.
+   --  subprogram again for remaining data. Sets Success to False when some
+   --  non-recoverable error appears during execution of the subprogram.
+   --  Errors that appear asynchronously are reported by call of
+   --  Standard_Input_Stream_Error subprogram of the listener.
 
    procedure Close_Standard_Output (Self : in out Process'Class);
    --  Close standard output stream to the child process. Application can't
@@ -160,12 +164,16 @@ package Spawn.Processes is
    --  Do nothing if Self.Status /= Running
 
    procedure Read_Standard_Output
-     (Self : in out Process'Class;
-      Data : out Ada.Streams.Stream_Element_Array;
-      Last : out Ada.Streams.Stream_Element_Offset);
-   --  Returns available data received through standard output stream. If no
-   --  data was read, the Standard_Output_Available notification will be
-   --  emitted later.
+     (Self    : in out Process'Class;
+      Data    : out Ada.Streams.Stream_Element_Array;
+      Last    : out Ada.Streams.Stream_Element_Offset;
+      Success : in out Boolean);
+   --  Returns available data received through standard output stream. If
+   --  no data was read, the Standard_Output_Available notification will
+   --  be emitted later. Sets Success to False when some non-recoverable
+   --  error appears during execution of the subprogram. Errors that appear
+   --  asynchronously are reported by call of Standard_Output_Stream_Error
+   --  subprogram of the listener.
 
    procedure Close_Standard_Error (Self : in out Process'Class);
    --  Do nothing if Self.Status /= Running
@@ -176,12 +184,16 @@ package Spawn.Processes is
    --  Do nothing if Self.Status /= Running
 
    procedure Read_Standard_Error
-     (Self : in out Process'Class;
-      Data : out Ada.Streams.Stream_Element_Array;
-      Last : out Ada.Streams.Stream_Element_Offset);
-   --  Returns available data received through standard error stream. If no
-   --  data was read, the Standard_Error_Available notification will be
-   --  emitted later.
+     (Self    : in out Process'Class;
+      Data    : out Ada.Streams.Stream_Element_Array;
+      Last    : out Ada.Streams.Stream_Element_Offset;
+      Success : in out Boolean);
+   --  Returns available data received through standard error stream. If
+   --  no data was read, the Standard_Error_Available notification will
+   --  be emitted later. Sets Success to False when some non-recoverable
+   --  error appears during execution of the subprogram. Errors that appear
+   --  asynchronously are reported by call of Standard_Error_Stream_Error
+   --  subprogram of the listener.
 
    --  For compatibility with older API:
    subtype Process_Listener is Spawn.Process_Listeners.Process_Listener;

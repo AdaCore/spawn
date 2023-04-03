@@ -48,4 +48,22 @@ package Spawn.Process_Listeners is
    --  This will be called when an exception occurred in one of the
    --  callbacks set in place
 
+   procedure Standard_Output_Stream_Error
+     (Self    : in out Process_Listener;
+      Message : String) is null;
+   --  Called on error condition of operation on standard output stream. It
+   --  reports asynchronous errors only.
+
+   procedure Standard_Error_Stream_Error
+     (Self    : in out Process_Listener;
+      Message : String) is null;
+   --  Called on error condition of operation on standard error stream. It
+   --  reports asynchronous errors only.
+
+   procedure Standard_Input_Stream_Error
+     (Self    : in out Process_Listener;
+      Message : String) is null;
+   --  Called on error of operation on standard input stream. It reports
+   --  asynchronous errors only.
+
 end Spawn.Process_Listeners;
