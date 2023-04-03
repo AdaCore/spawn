@@ -1,5 +1,5 @@
 --
---  Copyright (C) 2018-2021, AdaCore
+--  Copyright (C) 2018-2023, AdaCore
 --
 --  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 --
@@ -71,10 +71,12 @@ procedure Spawn_Test is
       begin
          loop
             declare
-               Data : Ada.Streams.Stream_Element_Array (1 .. 5);
-               Last : Ada.Streams.Stream_Element_Count;
+               Data    : Ada.Streams.Stream_Element_Array (1 .. 5);
+               Last    : Ada.Streams.Stream_Element_Count;
+               Success : Boolean := True;
+
             begin
-               P.Read_Standard_Output (Data, Last);
+               P.Read_Standard_Output (Data, Last, Success);
 
                exit when Last < Data'First;
 
@@ -95,10 +97,12 @@ procedure Spawn_Test is
       begin
          loop
             declare
-               Data : Ada.Streams.Stream_Element_Array (1 .. 5);
-               Last : Ada.Streams.Stream_Element_Count;
+               Data    : Ada.Streams.Stream_Element_Array (1 .. 5);
+               Last    : Ada.Streams.Stream_Element_Count;
+               Success : Boolean := True;
+
             begin
-               P.Read_Standard_Error (Data, Last);
+               P.Read_Standard_Error (Data, Last, Success);
 
                exit when Last < Data'First;
 
@@ -119,16 +123,18 @@ procedure Spawn_Test is
       is
          use type Ada.Streams.Stream_Element_Count;
 
-         Text : constant String :=
+         Text    : constant String :=
            Ada.Strings.Unbounded.To_String (Self.Stdin);
-         Last : Ada.Streams.Stream_Element_Count := Text'Length;
-         Data : Ada.Streams.Stream_Element_Array (1 .. Last);
+         Last    : Ada.Streams.Stream_Element_Count := Text'Length;
+         Data    : Ada.Streams.Stream_Element_Array (1 .. Last);
+         Success : Boolean := True;
+
       begin
          for J in Data'Range loop
             Data (J) := Character'Pos (Text (Positive (J)));
          end loop;
 
-         P.Write_Standard_Input (Data, Last);
+         P.Write_Standard_Input (Data, Last, Success);
 
          pragma Assert (Last = Data'Last);
          Self.Stdin := Ada.Strings.Unbounded.Null_Unbounded_String;
