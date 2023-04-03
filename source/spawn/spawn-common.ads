@@ -1,5 +1,5 @@
 --
---  Copyright (C) 2018-2022, AdaCore
+--  Copyright (C) 2018-2023, AdaCore
 --
 --  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 --
@@ -78,9 +78,6 @@ package Spawn.Common is
    procedure Set_Standard_Error_PTY (Self : in out Process'Class);
 
    procedure Emit_Started (Self : Process'Class);
-   procedure Emit_Stdin_Available (Self : Process'Class);
-   procedure Emit_Stderr_Available (Self : Process'Class);
-   procedure Emit_Stdout_Available (Self : Process'Class);
 
    procedure Emit_Error_Occurred
      (Self          : Process'Class;
@@ -94,6 +91,22 @@ package Spawn.Common is
      (Self        : Process'Class;
       Exit_Status : Process_Exit_Status;
       Exit_Code   : Process_Exit_Code);
+
+   procedure Emit_Stdin_Available (Self : Process'Class);
+   procedure Emit_Stderr_Available (Self : Process'Class);
+   procedure Emit_Stdout_Available (Self : Process'Class);
+
+   procedure Emit_Standard_Error_Stream_Error
+     (Self    : Process'Class;
+      Message : String);
+
+   procedure Emit_Standard_Input_Stream_Error
+     (Self    : Process'Class;
+      Message : String);
+
+   procedure Emit_Standard_Output_Stream_Error
+     (Self    : Process'Class;
+      Message : String);
 
    function Status (Self : Process'Class) return Process_Status is
      (Self.Status);
