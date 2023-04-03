@@ -1,5 +1,5 @@
 --
---  Copyright (C) 2018-2022, AdaCore
+--  Copyright (C) 2018-2023, AdaCore
 --
 --  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 --
@@ -42,19 +42,22 @@ private package Spawn.Channels is
    procedure Start_Watch (Self : in out Channels);
 
    procedure Write_Stdin
-     (Self : in out Channels;
-      Data : Ada.Streams.Stream_Element_Array;
-      Last : out Ada.Streams.Stream_Element_Offset);
+     (Self    : in out Channels;
+      Data    : Ada.Streams.Stream_Element_Array;
+      Last    : out Ada.Streams.Stream_Element_Offset;
+      Success : in out Boolean);
 
    procedure Read_Stdout
-     (Self : in out Channels;
-      Data : out Ada.Streams.Stream_Element_Array;
-      Last : out Ada.Streams.Stream_Element_Offset);
+     (Self    : in out Channels;
+      Data    : out Ada.Streams.Stream_Element_Array;
+      Last    : out Ada.Streams.Stream_Element_Offset;
+      Success : in out Boolean);
 
    procedure Read_Stderr
-     (Self : in out Channels;
-      Data : out Ada.Streams.Stream_Element_Array;
-      Last : out Ada.Streams.Stream_Element_Offset);
+     (Self    : in out Channels;
+      Data    : out Ada.Streams.Stream_Element_Array;
+      Last    : out Ada.Streams.Stream_Element_Offset;
+      Success : in out Boolean);
 
    function Is_Active (Self : Channels) return Boolean;
 

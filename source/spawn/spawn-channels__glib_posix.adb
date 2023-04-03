@@ -1,5 +1,5 @@
 --
---  Copyright (C) 2018-2022, AdaCore
+--  Copyright (C) 2018-2023, AdaCore
 --
 --  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 --
@@ -247,9 +247,10 @@ package body Spawn.Channels is
    -----------------
 
    procedure Read_Stderr
-     (Self : in out Channels;
-      Data : out Ada.Streams.Stream_Element_Array;
-      Last : out Ada.Streams.Stream_Element_Offset)
+     (Self    : in out Channels;
+      Data    : out Ada.Streams.Stream_Element_Array;
+      Last    : out Ada.Streams.Stream_Element_Offset;
+      Success : in out Boolean)
    is
       use type Glib.Gsize;
 
@@ -272,6 +273,7 @@ package body Spawn.Channels is
            Buf        => Data,
            Bytes_Read => Count'Access,
            Error      => Error'Access);
+
       case Status is
          when Glib.IOChannel.G_Io_Status_Eof =>
             --  Reading is completed, so no watching is required
@@ -292,8 +294,7 @@ package body Spawn.Channels is
             Start_Stderr_Watch (Self);
 
          when Glib.IOChannel.G_Io_Status_Error =>
-            Self.Process.Emit_Error_Occurred
-              (Integer (Glib.Error.Get_Code (Error)));
+            Success := False;
       end case;
    end Read_Stderr;
 
@@ -302,9 +303,10 @@ package body Spawn.Channels is
    -----------------
 
    procedure Read_Stdout
-     (Self : in out Channels;
-      Data : out Ada.Streams.Stream_Element_Array;
-      Last : out Ada.Streams.Stream_Element_Offset)
+     (Self    : in out Channels;
+      Data    : out Ada.Streams.Stream_Element_Array;
+      Last    : out Ada.Streams.Stream_Element_Offset;
+      Success : in out Boolean)
    is
       use type Glib.Gsize;
 
@@ -346,8 +348,7 @@ package body Spawn.Channels is
             Start_Stdout_Watch (Self);
 
          when Glib.IOChannel.G_Io_Status_Error =>
-            Self.Process.Emit_Error_Occurred
-              (Integer (Glib.Error.Get_Code (Error)));
+            Success := False;
       end case;
    end Read_Stdout;
 
@@ -835,9 +836,10 @@ package body Spawn.Channels is
    -----------------
 
    procedure Write_Stdin
-     (Self : in out Channels;
-      Data : Ada.Streams.Stream_Element_Array;
-      Last : out Ada.Streams.Stream_Element_Offset)
+     (Self    : in out Channels;
+      Data    : Ada.Streams.Stream_Element_Array;
+      Last    : out Ada.Streams.Stream_Element_Offset;
+      Success : in out Boolean)
    is
       Error  : aliased Glib.Error.GError;
       Count  : aliased Glib.Gsize;
@@ -871,8 +873,7 @@ package body Spawn.Channels is
             Start_Stdin_Watch (Self);
 
          when Glib.IOChannel.G_Io_Status_Error =>
-            Self.Process.Emit_Error_Occurred
-              (Integer (Glib.Error.Get_Code (Error)));
+            Success := False;
 
          when others =>
             raise Program_Error;

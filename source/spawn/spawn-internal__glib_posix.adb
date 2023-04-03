@@ -286,11 +286,12 @@ package body Spawn.Internal is
    -------------------------
 
    procedure Read_Standard_Error
-     (Self : in out Process'Class;
-      Data : out Ada.Streams.Stream_Element_Array;
-      Last : out Ada.Streams.Stream_Element_Offset) is
+     (Self    : in out Process'Class;
+      Data    : out Ada.Streams.Stream_Element_Array;
+      Last    : out Ada.Streams.Stream_Element_Offset;
+      Success : in out Boolean) is
    begin
-      Spawn.Channels.Read_Stderr (Self.Channels, Data, Last);
+      Spawn.Channels.Read_Stderr (Self.Channels, Data, Last, Success);
    end Read_Standard_Error;
 
    --------------------------
@@ -298,11 +299,12 @@ package body Spawn.Internal is
    --------------------------
 
    procedure Read_Standard_Output
-     (Self : in out Process'Class;
-      Data : out Ada.Streams.Stream_Element_Array;
-      Last : out Ada.Streams.Stream_Element_Offset) is
+     (Self    : in out Process'Class;
+      Data    : out Ada.Streams.Stream_Element_Array;
+      Last    : out Ada.Streams.Stream_Element_Offset;
+      Success : in out Boolean) is
    begin
-      Spawn.Channels.Read_Stdout (Self.Channels, Data, Last);
+      Spawn.Channels.Read_Stdout (Self.Channels, Data, Last, Success);
    end Read_Standard_Output;
 
    -------------------------
@@ -354,11 +356,12 @@ package body Spawn.Internal is
    --------------------------
 
    procedure Write_Standard_Input
-     (Self : in out Process'Class;
-      Data : Ada.Streams.Stream_Element_Array;
-      Last : out Ada.Streams.Stream_Element_Offset) is
+     (Self    : in out Process'Class;
+      Data    : Ada.Streams.Stream_Element_Array;
+      Last    : out Ada.Streams.Stream_Element_Offset;
+      Success : in out Boolean) is
    begin
-      Spawn.Channels.Write_Stdin (Self.Channels, Data, Last);
+      Spawn.Channels.Write_Stdin (Self.Channels, Data, Last, Success);
    end Write_Standard_Input;
 
 end Spawn.Internal;
