@@ -1,5 +1,5 @@
 --
---  Copyright (C) 2018-2022, AdaCore
+--  Copyright (C) 2018-2023, AdaCore
 --
 --  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 --
@@ -45,15 +45,17 @@ package Spawn.Channels is
       Poll : Spawn.Polls.Poll_Access);
 
    procedure Write_Stdin
-     (Self : in out Channels;
-      Data : Ada.Streams.Stream_Element_Array;
-      Last : out Ada.Streams.Stream_Element_Offset);
+     (Self    : in out Channels;
+      Data    : Ada.Streams.Stream_Element_Array;
+      Last    : out Ada.Streams.Stream_Element_Offset;
+      Success : in out Boolean);
 
    procedure Read
-     (Self : in out Channels;
-      Kind : Spawn.Common.Pipe_Kinds;
-      Data : out Ada.Streams.Stream_Element_Array;
-      Last : out Ada.Streams.Stream_Element_Offset);
+     (Self    : in out Channels;
+      Kind    : Spawn.Common.Pipe_Kinds;
+      Data    : out Ada.Streams.Stream_Element_Array;
+      Last    : out Ada.Streams.Stream_Element_Offset;
+      Success : in out Boolean);
 
    function Is_Active (Self : Channels) return Boolean;
 
