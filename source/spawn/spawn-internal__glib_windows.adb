@@ -263,11 +263,13 @@ package body Spawn.Internal is
             case Kind is
                when Stderr =>
                   Self.Emit_Standard_Error_Stream_Error
-                    (Spawn.Internal.Windows.Error_Message);
+                    (Spawn.Internal.Windows.Error_Message
+                       (System.Win32.GetLastError));
 
                when Stdout =>
                   Self.Emit_Standard_Output_Stream_Error
-                    (Spawn.Internal.Windows.Error_Message);
+                    (Spawn.Internal.Windows.Error_Message
+                       (System.Win32.GetLastError));
 
                when others =>
                   null;
