@@ -123,16 +123,25 @@ package body Spawn.Internal is
    -------------------------
 
    procedure Read_Standard_Error
-     (Self : in out Process'Class;
-      Data : out Ada.Streams.Stream_Element_Array;
-      Last : out Ada.Streams.Stream_Element_Offset)
+     (Self    : in out Process'Class;
+      Data    : out Ada.Streams.Stream_Element_Array;
+      Last    : out Ada.Streams.Stream_Element_Offset;
+      Success : in out Boolean)
    is
+      pragma Unreferenced (Success);
+      --  There are no synchronous IO errors in this implementation
+
       procedure On_No_Data;
+
+      ----------------
+      -- On_No_Data --
+      ----------------
 
       procedure On_No_Data is
       begin
          Monitor.Enqueue ((Monitor.Watch_Pipe, Self'Unchecked_Access, Stderr));
       end On_No_Data;
+
    begin
       if Self.Status /= Running then
          Last := Data'First - 1;
@@ -147,16 +156,25 @@ package body Spawn.Internal is
    --------------------------
 
    procedure Read_Standard_Output
-     (Self : in out Process'Class;
-      Data : out Ada.Streams.Stream_Element_Array;
-      Last : out Ada.Streams.Stream_Element_Offset)
+     (Self    : in out Process'Class;
+      Data    : out Ada.Streams.Stream_Element_Array;
+      Last    : out Ada.Streams.Stream_Element_Offset;
+      Success : in out Boolean)
    is
+      pragma Unreferenced (Success);
+      --  There are no synchronous IO errors in this implementation
+
       procedure On_No_Data;
+
+      ----------------
+      -- On_No_Data --
+      ----------------
 
       procedure On_No_Data is
       begin
          Monitor.Enqueue ((Monitor.Watch_Pipe, Self'Unchecked_Access, Stdout));
       end On_No_Data;
+
    begin
       if Self.Status /= Running then
          Last := Data'First - 1;
@@ -191,10 +209,14 @@ package body Spawn.Internal is
    --------------------------
 
    procedure Write_Standard_Input
-     (Self : in out Process'Class;
-      Data : Ada.Streams.Stream_Element_Array;
-      Last : out Ada.Streams.Stream_Element_Offset)
+     (Self    : in out Process'Class;
+      Data    : Ada.Streams.Stream_Element_Array;
+      Last    : out Ada.Streams.Stream_Element_Offset;
+      Success : in out Boolean)
    is
+      pragma Unreferenced (Success);
+      --  There are no synchronous IO errors in this implementation
+
       procedure On_Has_Data;
 
       -----------------
