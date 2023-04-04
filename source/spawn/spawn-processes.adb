@@ -41,7 +41,9 @@ package body Spawn.Processes is
 
    procedure Kill_Process (Self : in out Process'Class) is
    begin
-      Self.Interal.Kill_Process;
+      if Self.Status = Running then
+         Self.Interal.Kill_Process;
+      end if;
    end Kill_Process;
 
    -------------------------
