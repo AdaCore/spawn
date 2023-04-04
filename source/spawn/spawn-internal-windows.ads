@@ -1,5 +1,5 @@
 --
---  Copyright (C) 2018-2022, AdaCore
+--  Copyright (C) 2018-2023, AdaCore
 --
 --  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 --
@@ -43,5 +43,8 @@ package Spawn.Internal.Windows is
       lpOverlapped              : access Internal.Context;
       Kind                      : Spawn.Common.Standard_Pipe);
    --  Implementation shared between Standard_[Output/Error]_Callback
+
+   function Error_Message return String;
+   --  Return message for the current error retrived with GetLastError.
 
 end Spawn.Internal.Windows;

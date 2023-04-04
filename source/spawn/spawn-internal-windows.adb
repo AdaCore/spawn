@@ -1,5 +1,5 @@
 --
---  Copyright (C) 2018-2022, AdaCore
+--  Copyright (C) 2018-2023, AdaCore
 --
 --  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 --
@@ -9,6 +9,7 @@ with Ada.Strings.UTF_Encoding.Wide_Strings;
 with Ada.Strings.Wide_Fixed;
 with Ada.Strings.Wide_Unbounded;
 with Ada.Strings.Unbounded;
+with Ada.Unchecked_Conversion;
 with Interfaces.C.Strings;
 
 pragma Warnings (Off);
@@ -666,6 +667,58 @@ package body Spawn.Internal.Windows is
          Last := Data'First - 1;
       end if;
    end Do_Write;
+
+   -------------------
+   -- Error_Message --
+   -------------------
+
+   function Error_Message return String is
+      use type Spawn.Windows_API.DWORD;
+
+      Len : Spawn.Windows_API.DWORD;
+      Buf : Spawn.Windows_API.LPWSTR;
+
+   begin
+      Len :=
+        Spawn.Windows_API.FormatMessageW
+          (dwFlags      =>
+             Spawn.Windows_API.FORMAT_MESSAGE_ALLOCATE_BUFFER
+               + Spawn.Windows_API.FORMAT_MESSAGE_FROM_SYSTEM
+               + Spawn.Windows_API.FORMAT_MESSAGE_IGNORE_INSERTS,
+           lpSource     => System.Null_Address,
+           dwMessageId  => System.Win32.GetLastError,
+           dwLanguageId =>
+             Spawn.Windows_API.MAKELANGID
+               (Spawn.Windows_API.LANG_NEUTRAL,
+                Spawn.Windows_API.SUBLANG_DEFAULT),
+           lpBuffer     => Buf,
+           nSize        => 0,
+           Arguments    => System.Null_Address);
+
+      if Len = 0 then
+         return "";
+      end if;
+
+      declare
+         WB : Wide_String (1 .. Natural (Len)) with Address => Buf.all'Address;
+
+      begin
+         return Result : constant String :=
+                  Ada.Strings.UTF_Encoding.Wide_Strings.Encode (WB)
+         do
+            declare
+               function To_Address is
+                 new Ada.Unchecked_Conversion
+                       (Spawn.Windows_API.LPWSTR, System.Address);
+
+               Dummy : System.Address;
+
+            begin
+               Dummy := Spawn.Windows_API.LocalFree (To_Address (Buf));
+            end;
+         end return;
+      end;
+   end Error_Message;
 
    -----------------
    -- IO_Callback --
