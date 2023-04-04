@@ -6,6 +6,7 @@
 
 with Ada.Strings.UTF_Encoding.Wide_Strings;
 with Ada.Wide_Characters.Unicode;
+with System;
 
 with Glib.Spawn;
 
@@ -56,11 +57,12 @@ package body Spawn.Internal is
 
    procedure Do_Start_Process (Self : aliased in out Process'Class);
 
-   procedure Do_Read
-     (Self : in out Process'Class;
-      Data : out Ada.Streams.Stream_Element_Array;
-      Last : out Ada.Streams.Stream_Element_Offset;
-      Kind : Spawn.Common.Standard_Pipe);
+   procedure Read_Standard_Stream
+     (Self    : in out Process'Class;
+      Data    : out Ada.Streams.Stream_Element_Array;
+      Last    : out Ada.Streams.Stream_Element_Offset;
+      Kind    : Spawn.Common.Standard_Pipe;
+      Success : in out Boolean);
 
    function Child_Watch is new Glib.Main.Generic_Child_Add_Watch
      (User_Data => Internal.Process_Reference);
@@ -122,44 +124,6 @@ package body Spawn.Internal is
    begin
       Windows.Do_Close_Pipe (Self, Stdout);
    end Close_Standard_Output;
-
-   -------------
-   -- Do_Read --
-   -------------
-
-   procedure Do_Read
-     (Self : in out Process'Class;
-      Data : out Ada.Streams.Stream_Element_Array;
-      Last : out Ada.Streams.Stream_Element_Offset;
-      Kind : Spawn.Common.Standard_Pipe)
-   is
-      procedure On_No_Data;
-
-      ----------------
-      -- On_No_Data --
-      ----------------
-
-      procedure On_No_Data is
-         use type Windows_API.BOOL;
-
-         Ok    : Windows_API.BOOL;
-         Pipe  : Context renames Self.pipe (Kind);
-      begin
-         Ok := Read_Write_Ex.ReadFileEx
-           (hFile                => Pipe.Handle,
-            lpBuffer             => Pipe.Buffer,
-            nNumberOfBytesToRead => Pipe.Buffer'Length,
-            lpOverlapped         => Pipe'Access,
-            lpCompletionRoutine  => Callback (Kind));
-
-         if Ok = System.Win32.FALSE then
-            Self.Emit_Error_Occurred (Integer (System.Win32.GetLastError));
-         end if;
-      end On_No_Data;
-
-   begin
-      Windows.Do_Read (Self, Data, Last, Kind, On_No_Data'Access);
-   end Do_Read;
 
    ----------------------
    -- Do_Start_Process --
@@ -244,11 +208,12 @@ package body Spawn.Internal is
    -------------------------
 
    procedure Read_Standard_Error
-     (Self : in out Process'Class;
-      Data : out Ada.Streams.Stream_Element_Array;
-      Last : out Ada.Streams.Stream_Element_Offset) is
+     (Self    : in out Process'Class;
+      Data    : out Ada.Streams.Stream_Element_Array;
+      Last    : out Ada.Streams.Stream_Element_Offset;
+      Success : in out Boolean) is
    begin
-      Do_Read (Self, Data, Last, Stderr);
+      Read_Standard_Stream (Self, Data, Last, Stderr, Success);
    end Read_Standard_Error;
 
    --------------------------
@@ -256,12 +221,66 @@ package body Spawn.Internal is
    --------------------------
 
    procedure Read_Standard_Output
-     (Self : in out Process'Class;
-      Data : out Ada.Streams.Stream_Element_Array;
-      Last : out Ada.Streams.Stream_Element_Offset) is
+     (Self    : in out Process'Class;
+      Data    : out Ada.Streams.Stream_Element_Array;
+      Last    : out Ada.Streams.Stream_Element_Offset;
+      Success : in out Boolean) is
    begin
-      Do_Read (Self, Data, Last, Stdout);
+      Read_Standard_Stream (Self, Data, Last, Stdout, Success);
    end Read_Standard_Output;
+
+   --------------------------
+   -- Read_Standard_Stream --
+   --------------------------
+
+   procedure Read_Standard_Stream
+     (Self    : in out Process'Class;
+      Data    : out Ada.Streams.Stream_Element_Array;
+      Last    : out Ada.Streams.Stream_Element_Offset;
+      Kind    : Spawn.Common.Standard_Pipe;
+      Success : in out Boolean)
+   is
+      procedure On_No_Data;
+
+      ----------------
+      -- On_No_Data --
+      ----------------
+
+      procedure On_No_Data is
+         use type Windows_API.BOOL;
+
+         Ok    : Windows_API.BOOL;
+         Pipe  : Context renames Self.pipe (Kind);
+      begin
+         Ok := Read_Write_Ex.ReadFileEx
+           (hFile                => Pipe.Handle,
+            lpBuffer             => Pipe.Buffer,
+            nNumberOfBytesToRead => Pipe.Buffer'Length,
+            lpOverlapped         => Pipe'Access,
+            lpCompletionRoutine  => Callback (Kind));
+
+         if Ok = System.Win32.FALSE then
+            case Kind is
+               when Stderr =>
+                  Self.Emit_Standard_Error_Stream_Error
+                    (Spawn.Internal.Windows.Error_Message);
+
+               when Stdout =>
+                  Self.Emit_Standard_Output_Stream_Error
+                    (Spawn.Internal.Windows.Error_Message);
+
+               when others =>
+                  null;
+            end case;
+
+         else
+            Success := False;
+         end if;
+      end On_No_Data;
+
+   begin
+      Windows.Do_Read (Self, Data, Last, Kind, On_No_Data'Access);
+   end Read_Standard_Stream;
 
    -----------------------------
    -- Standard_Error_Callback --
@@ -327,9 +346,10 @@ package body Spawn.Internal is
    --------------------------
 
    procedure Write_Standard_Input
-     (Self : in out Process'Class;
-      Data : Ada.Streams.Stream_Element_Array;
-      Last : out Ada.Streams.Stream_Element_Offset)
+     (Self    : in out Process'Class;
+      Data    : Ada.Streams.Stream_Element_Array;
+      Last    : out Ada.Streams.Stream_Element_Offset;
+      Success : in out Boolean)
    is
       procedure On_Has_Data;
 
@@ -339,6 +359,7 @@ package body Spawn.Internal is
 
       procedure On_Has_Data is
          use type Windows_API.BOOL;
+         use type Windows_API.DWORD;
 
          Ok   : Windows_API.BOOL;
          Pipe : Context renames Self.pipe (Stdin);
@@ -358,8 +379,11 @@ package body Spawn.Internal is
             lpOverlapped          => Pipe'Access,
             lpCompletionRoutine   => Standard_Input_Callback'Access);
 
-         if Ok = System.Win32.FALSE then
-            Self.Emit_Error_Occurred (Integer (System.Win32.GetLastError));
+         if Ok = System.Win32.FALSE
+           or else System.Win32.GetLastError
+                     /= Spawn.Windows_API.ERROR_SUCCESS
+         then
+            Success := False;
          end if;
       end On_Has_Data;
 

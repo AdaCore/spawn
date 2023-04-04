@@ -83,27 +83,30 @@ private package Spawn.Internal is
    --  See documentation in Spawn.Processes.
 
    procedure Write_Standard_Input
-     (Self : in out Process'Class;
-      Data : Ada.Streams.Stream_Element_Array;
-      Last : out Ada.Streams.Stream_Element_Offset);
+     (Self    : in out Process'Class;
+      Data    : Ada.Streams.Stream_Element_Array;
+      Last    : out Ada.Streams.Stream_Element_Offset;
+      Success : in out Boolean);
    --  See documentation in Spawn.Processes.
 
    procedure Close_Standard_Output (Self : in out Process'Class);
    --  See documentation in Spawn.Processes.
 
    procedure Read_Standard_Output
-     (Self : in out Process'Class;
-      Data : out Ada.Streams.Stream_Element_Array;
-      Last : out Ada.Streams.Stream_Element_Offset);
+     (Self    : in out Process'Class;
+      Data    : out Ada.Streams.Stream_Element_Array;
+      Last    : out Ada.Streams.Stream_Element_Offset;
+      Success : in out Boolean);
    --  See documentation in Spawn.Processes.
 
    procedure Close_Standard_Error (Self : in out Process'Class);
    --  See documentation in Spawn.Processes.
 
    procedure Read_Standard_Error
-     (Self : in out Process'Class;
-      Data : out Ada.Streams.Stream_Element_Array;
-      Last : out Ada.Streams.Stream_Element_Offset);
+     (Self    : in out Process'Class;
+      Data    : out Ada.Streams.Stream_Element_Array;
+      Last    : out Ada.Streams.Stream_Element_Offset;
+      Success : in out Boolean);
    --  See documentation in Spawn.Processes.
 
 end Spawn.Internal;
