@@ -71,16 +71,25 @@ private
          Stdin_Child   : Glib.Gint := -1;
          Stdin_Event   : Glib.Main.G_Source_Id := Glib.Main.No_Source_Id;
          Stdin_Lock    : Glib.Gboolean := 0;
+         --  Lock of the Stdin_Event field. Lock is managed as counter
+         --  to prevent reset of the Stdin_Event field by the nested IO
+         --  operation on the channel.
 
          Stdout_Parent : Glib.IOChannel.Giochannel := null;
          Stdout_Child  : Glib.Gint := -1;
          Stdout_Event  : Glib.Main.G_Source_Id := Glib.Main.No_Source_Id;
          Stdout_Lock   : Glib.Gboolean := 0;
+         --  Lock of the Stdout_Event field. Lock is managed as counter
+         --  to prevent reset of the Stdout_Event field by the nested IO
+         --  operation on the channel.
 
          Stderr_Parent : Glib.IOChannel.Giochannel := null;
          Stderr_Child  : Glib.Gint := -1;
          Stderr_Event  : Glib.Main.G_Source_Id := Glib.Main.No_Source_Id;
          Stderr_Lock   : Glib.Gboolean := 0;
+         --  Lock of the Stderr_Event field. Lock is managed as counter
+         --  to prevent reset of the Stderr_Event field by the nested IO
+         --  operation on the channel.
 
          PTY_Slave     : Glib.Gint := -1;
       end record;
