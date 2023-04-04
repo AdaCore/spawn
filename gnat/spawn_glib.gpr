@@ -49,6 +49,7 @@ library project Spawn_Glib is
       when "unix" | "osx" =>
          for Excluded_Source_Files use Common_Excluded &
            ("spawn-windows_api.ads",
+            "spawn-windows_api.adb",
             "spawn-internal-windows.ads",
             "spawn-internal-windows.adb");
 
