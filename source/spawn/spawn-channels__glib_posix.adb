@@ -176,7 +176,7 @@ package body Spawn.Channels is
          Channel_Error (Self);
       end if;
 
-      return Self.Stdout_Lock;
+      return Self.Stderr_Lock;
    end On_Stderr_Event;
 
    --------------------
