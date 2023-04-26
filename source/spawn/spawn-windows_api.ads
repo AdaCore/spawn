@@ -235,6 +235,7 @@ package Spawn.Windows_API is
          with Import, Convention => Stdcall,
               External_Name => "_get_osfhandle";
 
+   ERROR_SUCCESS           : constant DWORD := 0;
    ERROR_PIPE_BUSY         : constant DWORD := 231;
    ERROR_PIPE_CONNECTED    : constant DWORD := 535;
    ERROR_OPERATION_ABORTED : constant DWORD := 995;
@@ -292,5 +293,27 @@ package Spawn.Windows_API is
       wParam   : Windows_API.WPARAM;
       lParam   : Windows_API.LPARAM) return BOOL
      with Import, Convention => Stdcall, External_Name => "PostThreadMessageW";
+
+   function FormatMessageW
+     (dwFlags      : DWORD;
+      lpSource     : System.Address;
+      dwMessageId  : DWORD;
+      dwLanguageId : DWORD;
+      lpBuffer     : out LPWSTR;
+      nSize        : DWORD;
+      Arguments    : System.Address) return DWORD
+     with Import, Convention => Stdcall, External_Name => "FormatMessageW";
+
+   FORMAT_MESSAGE_ALLOCATE_BUFFER : constant DWORD := 16#100#;
+   FORMAT_MESSAGE_FROM_SYSTEM     : constant DWORD := 16#10000#;
+   FORMAT_MESSAGE_IGNORE_INSERTS  : constant DWORD := 16#200#;
+
+   function MAKELANGID (P : DWORD; S : DWORD) return DWORD;
+
+   LANG_NEUTRAL    : constant := 16#0#;
+   SUBLANG_DEFAULT : constant := 16#1#;
+
+   function LocalFree (hMem : System.Address) return System.Address
+     with Import, Convention => Stdcall, External_Name => "LocalAlloc";
 
 end Spawn.Windows_API;

@@ -1,5 +1,5 @@
 --
---  Copyright (C) 2018-2022, AdaCore
+--  Copyright (C) 2018-2023, AdaCore
 --
 --  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 --
@@ -255,10 +255,11 @@ package body Spawn.Channels is
    ----------
 
    procedure Read
-     (Self : in out Channels;
-      Kind : Spawn.Common.Pipe_Kinds;
-      Data : out Ada.Streams.Stream_Element_Array;
-      Last : out Ada.Streams.Stream_Element_Offset)
+     (Self    : in out Channels;
+      Kind    : Spawn.Common.Pipe_Kinds;
+      Data    : out Ada.Streams.Stream_Element_Array;
+      Last    : out Ada.Streams.Stream_Element_Offset;
+      Success : in out Boolean)
    is
       use type Ada.Streams.Stream_Element_Offset;
       use type Interfaces.C.size_t;
@@ -267,13 +268,15 @@ package body Spawn.Channels is
         Posix.read (Self.Parent (Kind), Data, Data'Length);
 
       Error : constant Interfaces.C.int := Errno;
+
    begin
       Last := Data'First - 1;
 
       if Count /= Interfaces.C.size_t'Last then
          Last := Data'First + Ada.Streams.Stream_Element_Offset (Count) - 1;
+
       elsif Error not in Posix.EAGAIN | Posix.EINTR then
-         Self.Process.Emit_Error_Occurred (Integer (Error));
+         Success := False;
       end if;
    end Read;
 
@@ -535,10 +538,15 @@ package body Spawn.Channels is
          Listener => Self'Unchecked_Access);
    end Start_Watch;
 
+   -----------------
+   -- Write_Stdin --
+   -----------------
+
    procedure Write_Stdin
-     (Self : in out Channels;
-      Data : Ada.Streams.Stream_Element_Array;
-      Last : out Ada.Streams.Stream_Element_Offset)
+     (Self    : in out Channels;
+      Data    : Ada.Streams.Stream_Element_Array;
+      Last    : out Ada.Streams.Stream_Element_Offset;
+      Success : in out Boolean)
    is
       use type Ada.Streams.Stream_Element_Offset;
       use type Interfaces.C.size_t;
@@ -552,8 +560,9 @@ package body Spawn.Channels is
 
       if Count /= Interfaces.C.size_t'Last then
          Last := Data'First + Ada.Streams.Stream_Element_Offset (Count) - 1;
+
       elsif Error not in Posix.EAGAIN | Posix.EINTR then
-         Self.Process.Emit_Error_Occurred (Integer (Error));
+         Success := False;
       end if;
    end Write_Stdin;
 end Spawn.Channels;

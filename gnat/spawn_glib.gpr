@@ -1,5 +1,5 @@
 --
---  Copyright (C) 2018-2022, AdaCore
+--  Copyright (C) 2018-2023, AdaCore
 --
 --  SPDX-License-Identifier: Apache-2.0
 --
@@ -12,7 +12,8 @@ library project Spawn_Glib is
    OS_API : OS_API_Kind := external ("OS", "unix");
 
    type Library_Kind is ("static", "static-pic", "relocatable");
-   Library_Type : Library_Kind := external ("LIBRARY_TYPE", "static");
+   Library_Type : Library_Kind :=
+     external ("SPAWN_GLIB_LIBRARY_TYPE", external ("LIBRARY_TYPE", "static"));
 
    type Spawn_Glib_Build_Kind is ("dev", "prod", "coverage");
    Build_Mode : Spawn_Glib_Build_Kind :=
@@ -48,6 +49,7 @@ library project Spawn_Glib is
       when "unix" | "osx" =>
          for Excluded_Source_Files use Common_Excluded &
            ("spawn-windows_api.ads",
+            "spawn-windows_api.adb",
             "spawn-internal-windows.ads",
             "spawn-internal-windows.adb");
 

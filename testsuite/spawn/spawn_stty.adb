@@ -1,5 +1,5 @@
 --
---  Copyright (C) 2018-2021, AdaCore
+--  Copyright (C) 2018-2023, AdaCore
 --
 --  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 --
@@ -58,10 +58,12 @@ procedure Spawn_STTY is
       begin
          loop
             declare
-               Data : Ada.Streams.Stream_Element_Array (1 .. 5);
-               Last : Ada.Streams.Stream_Element_Count;
+               Data    : Ada.Streams.Stream_Element_Array (1 .. 5);
+               Last    : Ada.Streams.Stream_Element_Count;
+               Success : Boolean := True;
+
             begin
-               Self.Process.Read_Standard_Output (Data, Last);
+               Self.Process.Read_Standard_Output (Data, Last, Success);
 
                exit when Last < Data'First;
 
@@ -82,10 +84,12 @@ procedure Spawn_STTY is
       begin
          loop
             declare
-               Data : Ada.Streams.Stream_Element_Array (1 .. 5);
-               Last : Ada.Streams.Stream_Element_Count;
+               Data    : Ada.Streams.Stream_Element_Array (1 .. 5);
+               Last    : Ada.Streams.Stream_Element_Count;
+               Success : Boolean := True;
+
             begin
-               Self.Process.Read_Standard_Error (Data, Last);
+               Self.Process.Read_Standard_Error (Data, Last, Success);
 
                exit when Last < Data'First;
 

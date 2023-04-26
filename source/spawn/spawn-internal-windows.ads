@@ -1,5 +1,5 @@
 --
---  Copyright (C) 2018-2022, AdaCore
+--  Copyright (C) 2018-2023, AdaCore
 --
 --  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 --
@@ -21,6 +21,7 @@ package Spawn.Internal.Windows is
    procedure Do_Close_Pipe
      (Self : in out Process'Class;
       Kind : Pipe_Kinds);
+   --  Close pipe. Ignore errors if any.
 
    procedure Do_Write
      (Self        : in out Process'Class;
@@ -42,6 +43,10 @@ package Spawn.Internal.Windows is
       dwNumberOfBytesTransfered : Windows_API.DWORD;
       lpOverlapped              : access Internal.Context;
       Kind                      : Spawn.Common.Standard_Pipe);
-   --  Implementation shared between Standard_[Output/Error]_Callback
+   --  Implementation shared between Standard_[Input/Output/Error]_Callback
+
+   function Error_Message
+     (dwErrorCode : Spawn.Windows_API.DWORD) return String;
+   --  Return message for the current error retrived with GetLastError.
 
 end Spawn.Internal.Windows;

@@ -1,5 +1,5 @@
 --
---  Copyright (C) 2018-2022, AdaCore
+--  Copyright (C) 2018-2023, AdaCore
 --
 --  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 --
@@ -83,6 +83,57 @@ package body Spawn.Common is
       when others =>
          null;
    end Emit_Stderr_Available;
+
+   --------------------------------------
+   -- Emit_Standard_Error_Stream_Error --
+   --------------------------------------
+
+   procedure Emit_Standard_Error_Stream_Error
+     (Self    : Process'Class;
+      Message : String) is
+   begin
+      if Self.Listener /= null then
+         Self.Listener.Standard_Output_Stream_Error (Message);
+      end if;
+
+   exception
+      when others =>
+         null;
+   end Emit_Standard_Error_Stream_Error;
+
+   --------------------------------------
+   -- Emit_Standard_Input_Stream_Error --
+   --------------------------------------
+
+   procedure Emit_Standard_Input_Stream_Error
+     (Self    : Process'Class;
+      Message : String) is
+   begin
+      if Self.Listener /= null then
+         Self.Listener.Standard_Input_Stream_Error (Message);
+      end if;
+
+   exception
+      when others =>
+         null;
+   end Emit_Standard_Input_Stream_Error;
+
+   ---------------------------------------
+   -- Emit_Standard_Output_Stream_Error --
+   ---------------------------------------
+
+   procedure Emit_Standard_Output_Stream_Error
+     (Self    : Process'Class;
+      Message : String) is
+   begin
+      if Self.Listener /= null then
+         Self.Listener.Standard_Output_Stream_Error (Message);
+      end if;
+
+   exception
+      when others =>
+         null;
+   end Emit_Standard_Output_Stream_Error;
 
    --------------------------
    -- Emit_Stdin_Available --

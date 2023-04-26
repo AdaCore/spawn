@@ -1,5 +1,5 @@
 --
---  Copyright (C) 2018-2022, AdaCore
+--  Copyright (C) 2018-2023, AdaCore
 --
 --  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 --
@@ -76,7 +76,28 @@ package body Spawn.Channels is
      with Convention => C;
    --  Common code to start (continue) watching of the IO channel.
 
-   procedure On_Close_Channels (Self : Channels);
+   procedure Channel_Error (Self : Channels);
+   --  Executed on IO channel failure to report postponed Finished signal.
+
+   -------------------
+   -- Channel_Error --
+   -------------------
+
+   procedure Channel_Error (Self : Channels) is
+   begin
+      if Self.Process.Pending_Finish then
+         --  Check whether all IO operations are done, then emit Finished
+         --  callback.
+
+         if not Is_Active (Self) then
+            Self.Process.Pending_Finish := False;
+            Self.Process.Status := Not_Running;
+
+            Self.Process.Emit_Finished
+              (Self.Process.Exit_Status, Self.Process.Exit_Code);
+         end if;
+      end if;
+   end Channel_Error;
 
    -----------------------------
    -- Close_Child_Descriptors --
@@ -113,27 +134,11 @@ package body Spawn.Channels is
 
    function Is_Active (Self : Channels) return Boolean is
    begin
-      return Self.Stdout_Event /= Glib.Main.No_Source_Id
-        or Self.Stderr_Event /= Glib.Main.No_Source_Id;
+      return
+        Self.Stdin_Event /= Glib.Main.No_Source_Id
+          or Self.Stdout_Event /= Glib.Main.No_Source_Id
+          or Self.Stderr_Event /= Glib.Main.No_Source_Id;
    end Is_Active;
-
-   -----------------------
-   -- On_Close_Channels --
-   -----------------------
-
-   procedure On_Close_Channels (Self : Channels) is
-   begin
-      if Self.Process.Pending_Finish then
-         Self.Process.Pending_Finish := False;
-         Self.Process.Status := Not_Running;
-
-         Self.Process.Emit_Finished
-           (Self.Process.Exit_Status, Self.Process.Exit_Code);
-      end if;
-   exception
-      when others =>
-         null;
-   end On_Close_Channels;
 
    ---------------------
    -- On_Stderr_Event --
@@ -149,23 +154,26 @@ package body Spawn.Channels is
       Self : Channels renames data.Self.Channels;
 
    begin
-      if (condition and Glib.IOChannel.G_Io_In) /= 0 then
-         Self.Stderr_Lock := @ - 1;
+      Self.Stderr_Lock := @ - 1;
 
+      if (condition and Glib.IOChannel.G_Io_In) /= 0 then
          Self.Process.Emit_Stderr_Available;
 
-         if Self.Stderr_Lock = 0 then
-            Self.Stderr_Event := Glib.Main.No_Source_Id;
-         end if;
+      elsif (condition and Glib.IOChannel.G_Io_Hup) /= 0
+        or (condition and Glib.IOChannel.G_Io_Err) /= 0
+      then
+         Self.Process.Emit_Standard_Error_Stream_Error
+           ("GIOChannel IO error");
       end if;
 
-      if (condition and Glib.IOChannel.G_Io_Hup) /= 0 then
-         Self.Stderr_Lock := 0;
+      if Self.Stderr_Lock = 0 then
          Self.Stderr_Event := Glib.Main.No_Source_Id;
+      end if;
 
-         if Self.Stdout_Event = Glib.Main.No_Source_Id then
-            On_Close_Channels (Self);
-         end if;
+      if (condition and Glib.IOChannel.G_Io_Hup) /= 0
+        or (condition and Glib.IOChannel.G_Io_Err) /= 0
+      then
+         Channel_Error (Self);
       end if;
 
       return Self.Stderr_Lock;
@@ -181,17 +189,30 @@ package body Spawn.Channels is
       data      : access Internal.Process_Reference) return Glib.Gboolean
    is
       pragma Unreferenced (source);
-      pragma Unreferenced (condition);
 
       Self : Channels renames data.Self.Channels;
 
    begin
       Self.Stdin_Lock := @ - 1;
 
-      Self.Process.Emit_Stdin_Available;
+      if (condition and Glib.IOChannel.G_Io_Out) /= 0 then
+         Self.Process.Emit_Stdin_Available;
+
+      elsif (condition and Glib.IOChannel.G_Io_Hup) /= 0
+        or (condition and Glib.IOChannel.G_Io_Err) /= 0
+      then
+         Self.Process.Emit_Standard_Error_Stream_Error
+           ("GIOChannel IO error");
+      end if;
 
       if Self.Stdin_Lock = 0 then
          Self.Stdin_Event := Glib.Main.No_Source_Id;
+      end if;
+
+      if (condition and Glib.IOChannel.G_Io_Hup) /= 0
+        or (condition and Glib.IOChannel.G_Io_Err) /= 0
+      then
+         Channel_Error (Self);
       end if;
 
       return Self.Stdin_Lock;
@@ -211,23 +232,26 @@ package body Spawn.Channels is
       Self : Channels renames data.Self.Channels;
 
    begin
-      if (condition and Glib.IOChannel.G_Io_In) /= 0 then
-         Self.Stdout_Lock := @ - 1;
+      Self.Stdout_Lock := @ - 1;
 
+      if (condition and Glib.IOChannel.G_Io_In) /= 0 then
          Self.Process.Emit_Stdout_Available;
 
-         if Self.Stdout_Lock = 0 then
-            Self.Stdout_Event := Glib.Main.No_Source_Id;
-         end if;
+      elsif (condition and Glib.IOChannel.G_Io_Hup) /= 0
+        or (condition and Glib.IOChannel.G_Io_Err) /= 0
+      then
+         Self.Process.Emit_Standard_Output_Stream_Error
+           ("GIOChannel IO error");
       end if;
 
-      if (condition and Glib.IOChannel.G_Io_Hup) /= 0 then
-         Self.Stdout_Lock := 0;
+      if Self.Stdout_Lock = 0 then
          Self.Stdout_Event := Glib.Main.No_Source_Id;
+      end if;
 
-         if Self.Stderr_Event = Glib.Main.No_Source_Id then
-            On_Close_Channels (Self);
-         end if;
+      if (condition and Glib.IOChannel.G_Io_Hup) /= 0
+        or (condition and Glib.IOChannel.G_Io_Err) /= 0
+      then
+         Channel_Error (Self);
       end if;
 
       return Self.Stdout_Lock;
@@ -247,9 +271,10 @@ package body Spawn.Channels is
    -----------------
 
    procedure Read_Stderr
-     (Self : in out Channels;
-      Data : out Ada.Streams.Stream_Element_Array;
-      Last : out Ada.Streams.Stream_Element_Offset)
+     (Self    : in out Channels;
+      Data    : out Ada.Streams.Stream_Element_Array;
+      Last    : out Ada.Streams.Stream_Element_Offset;
+      Success : in out Boolean)
    is
       use type Glib.Gsize;
 
@@ -272,6 +297,7 @@ package body Spawn.Channels is
            Buf        => Data,
            Bytes_Read => Count'Access,
            Error      => Error'Access);
+
       case Status is
          when Glib.IOChannel.G_Io_Status_Eof =>
             --  Reading is completed, so no watching is required
@@ -292,8 +318,7 @@ package body Spawn.Channels is
             Start_Stderr_Watch (Self);
 
          when Glib.IOChannel.G_Io_Status_Error =>
-            Self.Process.Emit_Error_Occurred
-              (Integer (Glib.Error.Get_Code (Error)));
+            Success := False;
       end case;
    end Read_Stderr;
 
@@ -302,9 +327,10 @@ package body Spawn.Channels is
    -----------------
 
    procedure Read_Stdout
-     (Self : in out Channels;
-      Data : out Ada.Streams.Stream_Element_Array;
-      Last : out Ada.Streams.Stream_Element_Offset)
+     (Self    : in out Channels;
+      Data    : out Ada.Streams.Stream_Element_Array;
+      Last    : out Ada.Streams.Stream_Element_Offset;
+      Success : in out Boolean)
    is
       use type Glib.Gsize;
 
@@ -346,8 +372,7 @@ package body Spawn.Channels is
             Start_Stdout_Watch (Self);
 
          when Glib.IOChannel.G_Io_Status_Error =>
-            Self.Process.Emit_Error_Occurred
-              (Integer (Glib.Error.Get_Code (Error)));
+            Success := False;
       end case;
    end Read_Stdout;
 
@@ -756,7 +781,9 @@ package body Spawn.Channels is
            (Self.Stderr_Parent,
             Self.Stderr_Event,
             Self.Stderr_Lock,
-            Glib.IOChannel.G_Io_In + Glib.IOChannel.G_Io_Hup,
+            Glib.IOChannel.G_Io_In
+              + Glib.IOChannel.G_Io_Hup
+              + Glib.IOChannel.G_Io_Err,
             On_Stderr_Event'Access,
             Self.Process.Reference'Unchecked_Access);
       end if;
@@ -772,7 +799,9 @@ package body Spawn.Channels is
         (Self.Stdin_Parent,
          Self.Stdin_Event,
          Self.Stdin_Lock,
-         Glib.IOChannel.G_Io_Out,
+         Glib.IOChannel.G_Io_Out
+              + Glib.IOChannel.G_Io_Hup
+              + Glib.IOChannel.G_Io_Err,
          On_Stdin_Event'Access,
          Self.Process.Reference'Unchecked_Access);
    end Start_Stdin_Watch;
@@ -787,7 +816,9 @@ package body Spawn.Channels is
         (Self.Stdout_Parent,
          Self.Stdout_Event,
          Self.Stdout_Lock,
-         Glib.IOChannel.G_Io_In + Glib.IOChannel.G_Io_Hup,
+         Glib.IOChannel.G_Io_In
+           + Glib.IOChannel.G_Io_Hup
+           + Glib.IOChannel.G_Io_Err,
          On_Stdout_Event'Access,
          Self.Process.Reference'Unchecked_Access);
    end Start_Stdout_Watch;
@@ -835,9 +866,10 @@ package body Spawn.Channels is
    -----------------
 
    procedure Write_Stdin
-     (Self : in out Channels;
-      Data : Ada.Streams.Stream_Element_Array;
-      Last : out Ada.Streams.Stream_Element_Offset)
+     (Self    : in out Channels;
+      Data    : Ada.Streams.Stream_Element_Array;
+      Last    : out Ada.Streams.Stream_Element_Offset;
+      Success : in out Boolean)
    is
       Error  : aliased Glib.Error.GError;
       Count  : aliased Glib.Gsize;
@@ -871,8 +903,7 @@ package body Spawn.Channels is
             Start_Stdin_Watch (Self);
 
          when Glib.IOChannel.G_Io_Status_Error =>
-            Self.Process.Emit_Error_Occurred
-              (Integer (Glib.Error.Get_Code (Error)));
+            Success := False;
 
          when others =>
             raise Program_Error;

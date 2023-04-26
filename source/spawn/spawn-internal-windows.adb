@@ -1,5 +1,5 @@
 --
---  Copyright (C) 2018-2022, AdaCore
+--  Copyright (C) 2018-2023, AdaCore
 --
 --  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 --
@@ -9,6 +9,7 @@ with Ada.Strings.UTF_Encoding.Wide_Strings;
 with Ada.Strings.Wide_Fixed;
 with Ada.Strings.Wide_Unbounded;
 with Ada.Strings.Unbounded;
+with Ada.Unchecked_Conversion;
 with Interfaces.C.Strings;
 
 pragma Warnings (Off);
@@ -175,38 +176,30 @@ package body Spawn.Internal.Windows is
    is
       use type Windows_API.HANDLE;
 
-      procedure Check_Error (Value : Windows_API.BOOL);
+      Dummy : Spawn.Windows_API.BOOL;
 
-      -----------------
-      -- Check_Error --
-      -----------------
-
-      procedure Check_Error (Value : Windows_API.BOOL) is
-         use type Windows_API.BOOL;
-      begin
-         if Value = System.Win32.FALSE then
-            Self.Emit_Error_Occurred (Integer (System.Win32.GetLastError));
-         end if;
-      end Check_Error;
-
-      Handle : Windows_API.HANDLE renames Self.pipe (Kind).Handle;
    begin
-      if Handle /= System.Win32.INVALID_HANDLE_VALUE then
-         if Self.pipe (Kind).Waiting_IO then
-            Self.pipe (Kind).Close_IO := True;
-            Check_Error (Windows_API.CancelIo (Self.pipe (Kind).Handle));
-         else
-            Check_Error (System.Win32.CloseHandle (Self.pipe (Kind).Handle));
-            Self.pipe (Kind).Handle := System.Win32.INVALID_HANDLE_VALUE;
+      if Self.pipe (Kind).Handle = System.Win32.INVALID_HANDLE_VALUE then
+         return;
+      end if;
 
-            if Self.Pending_Finish and then
-              (for all Pipe of Self.pipe =>
-                 Pipe.Handle = System.Win32.INVALID_HANDLE_VALUE)
-            then
-               Self.Pending_Finish := False;
-               Self.Status := Not_Running;
-               Self.Emit_Finished (Self.Exit_Status, Self.Exit_Code);
-            end if;
+      if Self.pipe (Kind).Waiting_IO then
+         Self.pipe (Kind).Close_IO := True;
+
+         Dummy := Windows_API.CancelIo (Self.pipe (Kind).Handle);
+
+      else
+         Dummy := System.Win32.CloseHandle (Self.pipe (Kind).Handle);
+
+         Self.pipe (Kind).Handle := System.Win32.INVALID_HANDLE_VALUE;
+
+         if Self.Pending_Finish and then
+           (for all Pipe of Self.pipe =>
+              Pipe.Handle = System.Win32.INVALID_HANDLE_VALUE)
+         then
+            Self.Pending_Finish := False;
+            Self.Status := Not_Running;
+            Self.Emit_Finished (Self.Exit_Status, Self.Exit_Code);
          end if;
       end if;
    end Do_Close_Pipe;
@@ -667,6 +660,60 @@ package body Spawn.Internal.Windows is
       end if;
    end Do_Write;
 
+   -------------------
+   -- Error_Message --
+   -------------------
+
+   function Error_Message
+     (dwErrorCode : Spawn.Windows_API.DWORD) return String
+   is
+      use type Spawn.Windows_API.DWORD;
+
+      Len : Spawn.Windows_API.DWORD;
+      Buf : Spawn.Windows_API.LPWSTR;
+
+   begin
+      Len :=
+        Spawn.Windows_API.FormatMessageW
+          (dwFlags      =>
+             Spawn.Windows_API.FORMAT_MESSAGE_ALLOCATE_BUFFER
+               + Spawn.Windows_API.FORMAT_MESSAGE_FROM_SYSTEM
+               + Spawn.Windows_API.FORMAT_MESSAGE_IGNORE_INSERTS,
+           lpSource     => System.Null_Address,
+           dwMessageId  => dwErrorCode,
+           dwLanguageId =>
+             Spawn.Windows_API.MAKELANGID
+               (Spawn.Windows_API.LANG_NEUTRAL,
+                Spawn.Windows_API.SUBLANG_DEFAULT),
+           lpBuffer     => Buf,
+           nSize        => 0,
+           Arguments    => System.Null_Address);
+
+      if Len = 0 then
+         return "";
+      end if;
+
+      declare
+         WB : Wide_String (1 .. Natural (Len)) with Address => Buf.all'Address;
+
+      begin
+         return Result : constant String :=
+                  Ada.Strings.UTF_Encoding.Wide_Strings.Encode (WB)
+         do
+            declare
+               function To_Address is
+                 new Ada.Unchecked_Conversion
+                       (Spawn.Windows_API.LPWSTR, System.Address);
+
+               Dummy : System.Address;
+
+            begin
+               Dummy := Spawn.Windows_API.LocalFree (To_Address (Buf));
+            end;
+         end return;
+      end;
+   end Error_Message;
+
    -----------------
    -- IO_Callback --
    -----------------
@@ -691,6 +738,7 @@ package body Spawn.Internal.Windows is
         (if Kind = Stdin
          then Transfered in Last | Last - Spawn.Internal.Buffer_Size
          else Transfered > 0);  --  Should be True
+
    begin
       Self.pipe (Kind).Waiting_IO := False;
 
@@ -718,11 +766,26 @@ package body Spawn.Internal.Windows is
             Self.pipe (Kind).Close_IO := False;
             Do_Close_Pipe (Self, Kind);
          end if;
+
       elsif dwErrorCode in 0 | Windows_API.ERROR_OPERATION_ABORTED then
          Do_Close_Pipe (Self, Kind);
+
       else
-         Self.Emit_Error_Occurred (Integer (dwErrorCode));
          Do_Close_Pipe (Self, Kind);
+
+         case Kind is
+            when Stdin =>
+               Self.Emit_Standard_Input_Stream_Error
+                 (Error_Message (dwErrorCode));
+
+            when Stdout =>
+               Self.Emit_Standard_Output_Stream_Error
+                 (Error_Message (dwErrorCode));
+
+            when Stderr =>
+               Self.Emit_Standard_Error_Stream_Error
+                 (Error_Message (dwErrorCode));
+         end case;
       end if;
    end IO_Callback;
 
@@ -731,42 +794,25 @@ package body Spawn.Internal.Windows is
    ---------------------
 
    procedure On_Process_Died (Self : in out Process'Class) is
-
+      use type Windows_API.BOOL;
       use type Windows_API.DWORD;
       use type Windows_API.HANDLE;
-
-      function Is_Error (Value : Windows_API.BOOL) return Boolean;
-
-      --------------
-      -- If_Error --
-      --------------
-
-      function Is_Error (Value : Windows_API.BOOL) return Boolean is
-         use type Windows_API.BOOL;
-      begin
-         if Value = System.Win32.FALSE then
-            Self.Emit_Error_Occurred (Integer (System.Win32.GetLastError));
-            return True;
-         else
-            return False;
-         end if;
-      end Is_Error;
 
       Exit_Code : aliased Windows_API.DWORD := 0;
 
    begin
       --  Close stdio pipes
+
       for J in Self.pipe'Range loop
          Do_Close_Pipe (Self, J);
       end loop;
 
-      if not Is_Error
-        (Windows_API.GetExitCodeProcess
-           (Self.pid.hProcess, Exit_Code'Access))
-        and then not Is_Error
-          (System.Win32.CloseHandle (Self.pid.hProcess))
-          and then not Is_Error
-            (System.Win32.CloseHandle (Self.pid.hThread))
+      if Windows_API.GetExitCodeProcess (Self.pid.hProcess, Exit_Code'Access)
+           /= System.Win32.FALSE
+        and then System.Win32.CloseHandle (Self.pid.hProcess)
+                   /= System.Win32.FALSE
+        and then System.Win32.CloseHandle (Self.pid.hThread)
+                   /= System.Win32.FALSE
       then
          --  Process exit code can be application defined code, Win32 error
          --  code, HRESULT code (including Win32 code or NTSTATUS code

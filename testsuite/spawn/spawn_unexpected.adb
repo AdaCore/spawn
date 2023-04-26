@@ -1,5 +1,5 @@
 --
---  Copyright (C) 2018-2021, AdaCore
+--  Copyright (C) 2018-2023, AdaCore
 --
 --  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 --
@@ -97,11 +97,13 @@ procedure Spawn_Unexpected is
    is
       use type Ada.Streams.Stream_Element_Offset;
 
-      Chunk : constant Ada.Streams.Stream_Element_Array :=
+      Chunk   : constant Ada.Streams.Stream_Element_Array :=
         (1 .. 10 => Character'Pos (Sample));
-      Last : Ada.Streams.Stream_Element_Offset;
+      Last    : Ada.Streams.Stream_Element_Offset;
+      Success : Boolean := True;
+
    begin
-      Process.Write_Standard_Input (Chunk, Last);
+      Process.Write_Standard_Input (Chunk, Last, Success);
       pragma Assert (Last < Chunk'First);
    end Write_Standard_Input;
 

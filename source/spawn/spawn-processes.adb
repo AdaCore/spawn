@@ -1,10 +1,12 @@
 --
---  Copyright (C) 2018-2022, AdaCore
+--  Copyright (C) 2018-2023, AdaCore
 --
 --  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 --
 
 package body Spawn.Processes is
+
+   use type Ada.Streams.Stream_Element_Offset;
 
    --------------------------
    -- Close_Standard_Error --
@@ -39,7 +41,9 @@ package body Spawn.Processes is
 
    procedure Kill_Process (Self : in out Process'Class) is
    begin
-      Self.Interal.Kill_Process;
+      if Self.Status = Running then
+         Self.Interal.Kill_Process;
+      end if;
    end Kill_Process;
 
    -------------------------
@@ -47,11 +51,18 @@ package body Spawn.Processes is
    -------------------------
 
    procedure Read_Standard_Error
-     (Self : in out Process'Class;
-      Data : out Ada.Streams.Stream_Element_Array;
-      Last : out Ada.Streams.Stream_Element_Offset) is
+     (Self    : in out Process'Class;
+      Data    : out Ada.Streams.Stream_Element_Array;
+      Last    : out Ada.Streams.Stream_Element_Offset;
+      Success : in out Boolean) is
    begin
-      Self.Interal.Read_Standard_Error (Data, Last);
+      if not Success then
+         Last := Data'First - 1;
+
+         return;
+      end if;
+
+      Self.Interal.Read_Standard_Error (Data, Last, Success);
    end Read_Standard_Error;
 
    --------------------------
@@ -59,11 +70,18 @@ package body Spawn.Processes is
    --------------------------
 
    procedure Read_Standard_Output
-     (Self : in out Process'Class;
-      Data : out Ada.Streams.Stream_Element_Array;
-      Last : out Ada.Streams.Stream_Element_Offset) is
+     (Self    : in out Process'Class;
+      Data    : out Ada.Streams.Stream_Element_Array;
+      Last    : out Ada.Streams.Stream_Element_Offset;
+      Success : in out Boolean) is
    begin
-      Self.Interal.Read_Standard_Output (Data, Last);
+      if not Success then
+         Last := Data'First - 1;
+
+         return;
+      end if;
+
+      Self.Interal.Read_Standard_Output (Data, Last, Success);
    end Read_Standard_Output;
 
    -------------------
@@ -170,11 +188,18 @@ package body Spawn.Processes is
    --------------------------
 
    procedure Write_Standard_Input
-     (Self : in out Process'Class;
-      Data : Ada.Streams.Stream_Element_Array;
-      Last : out Ada.Streams.Stream_Element_Offset) is
+     (Self    : in out Process'Class;
+      Data    : Ada.Streams.Stream_Element_Array;
+      Last    : out Ada.Streams.Stream_Element_Offset;
+      Success : in out Boolean) is
    begin
-      Self.Interal.Write_Standard_Input (Data, Last);
+      if not Success then
+         Last := Data'First - 1;
+
+         return;
+      end if;
+
+      Self.Interal.Write_Standard_Input (Data, Last, Success);
    end Write_Standard_Input;
 
 end Spawn.Processes;

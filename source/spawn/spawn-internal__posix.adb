@@ -111,9 +111,10 @@ package body Spawn.Internal is
    -------------------------
 
    procedure Read_Standard_Error
-     (Self : in out Process'Class;
-      Data : out Ada.Streams.Stream_Element_Array;
-      Last : out Ada.Streams.Stream_Element_Offset)
+     (Self    : in out Process'Class;
+      Data    : out Ada.Streams.Stream_Element_Array;
+      Last    : out Ada.Streams.Stream_Element_Offset;
+      Success : in out Boolean)
    is
       use type Ada.Streams.Stream_Element_Offset;
 
@@ -123,9 +124,9 @@ package body Spawn.Internal is
          return;
       end if;
 
-      Spawn.Channels.Read (Self.Channels, Stderr, Data, Last);
+      Spawn.Channels.Read (Self.Channels, Stderr, Data, Last, Success);
 
-      if Last = Data'First - 1 then
+      if Success and Last = Data'First - 1 then
          Monitor.Enqueue
            ((Monitor.Watch_Pipe, Self'Unchecked_Access, Stderr));
       end if;
@@ -136,9 +137,10 @@ package body Spawn.Internal is
    --------------------------
 
    procedure Read_Standard_Output
-     (Self : in out Process'Class;
-      Data : out Ada.Streams.Stream_Element_Array;
-      Last : out Ada.Streams.Stream_Element_Offset)
+     (Self    : in out Process'Class;
+      Data    : out Ada.Streams.Stream_Element_Array;
+      Last    : out Ada.Streams.Stream_Element_Offset;
+      Success : in out Boolean)
    is
       use type Ada.Streams.Stream_Element_Offset;
 
@@ -148,9 +150,9 @@ package body Spawn.Internal is
          return;
       end if;
 
-      Spawn.Channels.Read (Self.Channels, Stdout, Data, Last);
+      Spawn.Channels.Read (Self.Channels, Stdout, Data, Last, Success);
 
-      if Last = Data'First - 1 then
+      if Success and Last = Data'First - 1 then
          Monitor.Enqueue
            ((Monitor.Watch_Pipe, Self'Unchecked_Access, Stdout));
       end if;
@@ -186,9 +188,10 @@ package body Spawn.Internal is
    --------------------------
 
    procedure Write_Standard_Input
-     (Self : in out Process'Class;
-      Data : Ada.Streams.Stream_Element_Array;
-      Last : out Ada.Streams.Stream_Element_Offset)
+     (Self    : in out Process'Class;
+      Data    : Ada.Streams.Stream_Element_Array;
+      Last    : out Ada.Streams.Stream_Element_Offset;
+      Success : in out Boolean)
    is
       use type Ada.Streams.Stream_Element_Offset;
 
@@ -198,9 +201,9 @@ package body Spawn.Internal is
          return;
       end if;
 
-      Spawn.Channels.Write_Stdin (Self.Channels, Data, Last);
+      Spawn.Channels.Write_Stdin (Self.Channels, Data, Last, Success);
 
-      if Last /= Data'Length then
+      if Success and Last /= Data'Length then
          Monitor.Enqueue ((Monitor.Watch_Pipe, Self'Unchecked_Access, Stdin));
       end if;
    end Write_Standard_Input;

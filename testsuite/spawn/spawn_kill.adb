@@ -1,3 +1,9 @@
+--
+--  Copyright (C) 2021-2023, AdaCore
+--
+--  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+--
+
 with Ada.Command_Line;
 with Ada.Directories;
 with Ada.Streams;
@@ -52,10 +58,13 @@ procedure Spawn_Kill is
       begin
          loop
             declare
-               Data : Ada.Streams.Stream_Element_Array (1 .. 5);
-               Last : Ada.Streams.Stream_Element_Count;
+               Data    : Ada.Streams.Stream_Element_Array (1 .. 5);
+               Last    : Ada.Streams.Stream_Element_Count;
+               Success : Boolean := True;
+
             begin
-               Self.Proc.Read_Standard_Output (Data, Last);
+               Self.Proc.Read_Standard_Output (Data, Last, Success);
+               pragma Assert (Success);
 
                exit when Last < Data'First;
 
@@ -76,10 +85,12 @@ procedure Spawn_Kill is
       begin
          loop
             declare
-               Data : Ada.Streams.Stream_Element_Array (1 .. 5);
-               Last : Ada.Streams.Stream_Element_Count;
+               Data    : Ada.Streams.Stream_Element_Array (1 .. 5);
+               Last    : Ada.Streams.Stream_Element_Count;
+               Success : Boolean := True;
+
             begin
-               Self.Proc.Read_Standard_Error (Data, Last);
+               Self.Proc.Read_Standard_Error (Data, Last, Success);
 
                exit when Last < Data'First;
 
