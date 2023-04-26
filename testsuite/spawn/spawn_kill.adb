@@ -64,6 +64,7 @@ procedure Spawn_Kill is
 
             begin
                Self.Proc.Read_Standard_Output (Data, Last, Success);
+               pragma Assert (Success);
 
                exit when Last < Data'First;
 
