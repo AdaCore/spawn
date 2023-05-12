@@ -4,6 +4,8 @@
 --  SPDX-License-Identifier: Apache-2.0
 --
 
+with "../config/spawn_config.gpr";
+
 library project Spawn is
 
    type OS_API_Kind is ("unix", "osx", "Windows_NT");
@@ -18,13 +20,6 @@ library project Spawn is
      external ("SPAWN_BUILD_MODE", external ("BUILD_MODE", "prod"));
 
    Superproject := external ("SUPERPROJECT", "");
-
-   --  By default, treat warnings as errors in dev mode, but not in prod
-   --  mode. Let users override this default using the SPAWN_WARN_ERRORS
-   --  environment variable.
-
-   type Any_Boolean is ("false", "true");
-   Warnings_As_Errors : Any_Boolean := external ("SPAWN_WARN_ERRORS", "true");
 
    for Library_Kind use Library_Type;
    for Object_Dir   use "../.obj/" & Superproject & "/spawn/" & Library_Type;
@@ -60,16 +55,13 @@ library project Spawn is
             "spawn-internal-windows.adb");
    end case;
 
-   Ada_Switches := ();
+   Spawn_Ada_Compiler_Switches := ();
+   Coverage_Ada_Compiler_Switches := ();
    Linker_Options := ();
-   case Warnings_As_Errors is
-      when "true"  => Ada_Switches := Ada_Switches & ("-gnatwe");
-      when "false" => null;
-   end case;
 
    case Build_Mode is
       when "prod" =>
-         Ada_Switches := Ada_Switches & (
+         Spawn_Ada_Compiler_Switches := Spawn_Ada_Compiler_Switches & (
             --  Compile with optimizations
             "-O2",
 
@@ -79,7 +71,7 @@ library project Spawn is
          );
 
       when "dev" =>
-         Ada_Switches := Ada_Switches & (
+         Spawn_Ada_Compiler_Switches := Spawn_Ada_Compiler_Switches & (
             --  Compile with no optimization and with debug information to ease
             --  investigation in debuggers.
             "-O0", "-g",
@@ -96,10 +88,8 @@ library project Spawn is
          );
 
       when "coverage" =>
-         Ada_Switches := Ada_Switches & (
-            --  Compile with no optimization and with debug information to ease
-            --  investigation in debuggers.
-            "-O0", "-g",
+         Spawn_Ada_Compiler_Switches := Spawn_Ada_Compiler_Switches & ();
+         Coverage_Ada_Compiler_Switches := (
 
             --  Enable coverage code instrumentation.
             "--coverage");
@@ -107,7 +97,7 @@ library project Spawn is
          Linker_Options := Linker_Options & ("--coverage");
 
        when "AddressSanitizer" =>
-	    Ada_Switches := Ada_Switches & (
+          Spawn_Ada_Compiler_Switches := Spawn_Ada_Compiler_Switches & (
             --  Standard development flags
             "-O0", "-g",
             --  Enable the AddressSanitizer
@@ -116,8 +106,13 @@ library project Spawn is
          Linker_Options := Linker_Options & ("-fsanitize=address");
    end case;
 
+   Ada_Compiler_Switches :=
+     Spawn_Config.Ada_Compiler_Switches
+       & Spawn_Ada_Compiler_Switches
+       & Coverage_Ada_Compiler_Switches;
+
    package Compiler is
-      for Switches ("ada") use Ada_Switches;
+      for Switches ("ada") use Spawn_Ada_Compiler_Switches;
    end Compiler;
 
    package Linker is

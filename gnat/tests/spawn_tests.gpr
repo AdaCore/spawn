@@ -1,5 +1,5 @@
 --
---  Copyright (C) 2018-2021, AdaCore
+--  Copyright (C) 2018-2023, AdaCore
 --
 --  SPDX-License-Identifier: Apache-2.0
 --
@@ -20,8 +20,8 @@ project Spawn_Tests is
          null;
    end case;
 
-   for Source_Dirs use ("../testsuite/spawn");
-   for Object_Dir use "../.obj/spawn_test";
+   for Source_Dirs use ("../../testsuite/spawn");
+   for Object_Dir use "../../.obj/spawn_test";
    for Main use Main;
 
    package Compiler renames Spawn.Compiler;
