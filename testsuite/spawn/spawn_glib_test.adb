@@ -58,10 +58,11 @@ procedure Spawn_Glib_Test is
          use type Ada.Streams.Stream_Element_Offset;
          Data : Ada.Streams.Stream_Element_Array (1 .. 16);
          Last : Ada.Streams.Stream_Element_Count;
+         Ok   : Boolean := True;
       begin
          Ada.Text_IO.Put_Line ("Standard_Output_Available");
          loop
-            P.Read_Standard_Output (Data, Last);
+            P.Read_Standard_Output (Data, Last, Ok);
 
             exit when Last in 0;
 
@@ -95,9 +96,10 @@ procedure Spawn_Glib_Test is
             2 => Character'Pos ('K'),
             3 => 10);
          Last : Ada.Streams.Stream_Element_Count;
+         Ok   : Boolean := True;
       begin
          Ada.Text_IO.Put_Line ("Standard_Input_Available");
-         P.Write_Standard_Input (Data, Last);
+         P.Write_Standard_Input (Data, Last, Ok);
       end Standard_Input_Available;
 
       overriding procedure Started (Self : in out Listener) is
