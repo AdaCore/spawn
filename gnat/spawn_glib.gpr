@@ -5,6 +5,7 @@
 --
 
 with "gtkada";
+with "../config/spawn_config.gpr";
 
 library project Spawn_Glib is
 
@@ -18,13 +19,6 @@ library project Spawn_Glib is
    type Spawn_Glib_Build_Kind is ("dev", "prod", "coverage");
    Build_Mode : Spawn_Glib_Build_Kind :=
      external ("SPAWN_GLIB_BUILD_MODE", external ("BUILD_MODE", "prod"));
-
-   --  By default, treat warnings as errors in dev mode, but not in prod
-   --  mode. Let users override this default using the SPAWN_WARN_ERRORS
-   --  environment variable.
-
-   type Any_Boolean is ("false", "true");
-   Warnings_As_Errors : Any_Boolean := external ("SPAWN_WARN_ERRORS", "true");
 
    for Library_Kind use Library_Type;
    for Object_Dir   use "../.obj/spawn_glib/" & Library_Type;
@@ -63,16 +57,13 @@ library project Spawn_Glib is
             "posix_const.c");
    end case;
 
-   Ada_Switches := ();
+   Spawn_Ada_Compiler_Switches := ();
+   Coverage_Ada_Compiler_Switches := ();
    Linker_Options := ();
-   case Warnings_As_Errors is
-      when "true"  => Ada_Switches := Ada_Switches & ("-gnatwe");
-      when "false" => null;
-   end case;
 
    case Build_Mode is
       when "prod" =>
-         Ada_Switches := Ada_Switches & (
+         Spawn_Ada_Compiler_Switches := Spawn_Ada_Compiler_Switches & (
             --  Compile with optimizations
             "-O2",
 
@@ -82,7 +73,7 @@ library project Spawn_Glib is
          );
 
       when "dev" =>
-         Ada_Switches := Ada_Switches & (
+         Spawn_Ada_Compiler_Switches := Spawn_Ada_Compiler_Switches & (
             --  Compile with no optimization and with debug information to ease
             --  investigation in debuggers.
             "-O0", "-g",
@@ -99,10 +90,8 @@ library project Spawn_Glib is
          );
 
       when "coverage" =>
-         Ada_Switches := Ada_Switches & (
-            --  Compile with no optimization and with debug information to ease
-            --  investigation in debuggers.
-            "-O0", "-g",
+         Spawn_Ada_Compiler_Switches := Spawn_Ada_Compiler_Switches & ();
+         Coverage_Ada_Compiler_Switches := (
 
             --  Enable coverage code instrumentation.
             "--coverage");
@@ -110,8 +99,13 @@ library project Spawn_Glib is
          Linker_Options := Linker_Options & ("--coverage");
    end case;
 
+   Ada_Compiler_Switches :=
+     Spawn_Config.Ada_Compiler_Switches
+       & Spawn_Ada_Compiler_Switches
+       & Coverage_Ada_Compiler_Switches;
+
    package Compiler is
-      for Switches ("ada") use Ada_Switches;
+      for Switches ("ada") use Spawn_Ada_Compiler_Switches;
    end Compiler;
 
    package Linker is

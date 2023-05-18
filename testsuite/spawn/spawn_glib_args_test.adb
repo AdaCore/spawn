@@ -78,9 +78,10 @@ procedure Spawn_Glib_Args_Test is
       is
          Data : Ada.Streams.Stream_Element_Array (1 .. 256);
          Last : Ada.Streams.Stream_Element_Count;
+         Ok   : Boolean := True;
 
       begin
-         Self.Process.Read_Standard_Error (Data, Last);
+         Self.Process.Read_Standard_Error (Data, Last, Ok);
 
          for X of Data (1 .. Last) loop
             Ada.Text_IO.Put (Character'Val (X));
@@ -96,9 +97,10 @@ procedure Spawn_Glib_Args_Test is
       is
          Data : Ada.Streams.Stream_Element_Array (1 .. 256);
          Last : Ada.Streams.Stream_Element_Count;
+         Ok   : Boolean := True;
 
       begin
-         Self.Process.Read_Standard_Output (Data, Last);
+         Self.Process.Read_Standard_Output (Data, Last, Ok);
 
          for X of Data (1 .. Last) loop
             Ada.Text_IO.Put (Character'Val (X));

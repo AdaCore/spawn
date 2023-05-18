@@ -11,7 +11,11 @@ project-files = ["gnat/spawn.gpr"]
 tags = ["process", "launch", "pipe"]
 
 [configuration]
-disabled = true
+generate_ada = false
+generate_c = false
+
+[build-switches]
+"*".ada_version = "Ada2022"
 
 [gpr-externals]
 OS = ["unix", "osx", "Windows_NT"]

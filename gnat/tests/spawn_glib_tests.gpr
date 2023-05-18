@@ -1,5 +1,5 @@
 --
---  Copyright (C) 2018, AdaCore
+--  Copyright (C) 2018-2023, AdaCore
 --
 --  SPDX-License-Identifier: Apache-2.0
 --
@@ -8,8 +8,8 @@ with "spawn_glib";
 
 project Spawn_Glib_Tests is
 
-   for Source_Dirs use ("../testsuite/spawn");
-   for Object_Dir use "../.obj/spawn_test";
+   for Source_Dirs use ("../../testsuite/spawn");
+   for Object_Dir use "../../.obj/spawn_test";
    for Main use ("spawn_glib_test.adb", "spawn_glib_args_test.adb");
 
    package Compiler renames Spawn_Glib.Compiler;
