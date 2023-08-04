@@ -9,7 +9,7 @@ with "../config/spawn_config.gpr";
 library project Spawn is
 
    type OS_API_Kind is ("unix", "osx", "Windows_NT");
-   OS_API : OS_API_Kind := external ("OS", "unix");
+   OS_API : OS_API_Kind := external ("SPAWN_OS", external ("OS", "unix"));
 
    type Library_Kind is ("static", "static-pic", "relocatable");
    Library_Type : Library_Kind :=
