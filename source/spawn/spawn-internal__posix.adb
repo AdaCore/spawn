@@ -90,13 +90,11 @@ package body Spawn.Internal is
    ------------------
 
    procedure Kill_Process (Self : in out Process'Class) is
-      use type Interfaces.C.int;
-
-      Code : constant Interfaces.C.int :=
+      Ignore : constant Interfaces.C.int :=
         Spawn.Posix.kill
           (Self.pid, Interfaces.C.int (System.OS_Interface.SIGKILL));
    begin
-      pragma Assert (Code = 0);
+      null;
    end Kill_Process;
 
    ----------------
@@ -174,13 +172,11 @@ package body Spawn.Internal is
    -----------------------
 
    procedure Terminate_Process (Self : in out Process'Class) is
-      use type Interfaces.C.int;
-
-      Code : constant Interfaces.C.int :=
+      Ignore : constant Interfaces.C.int :=
         Spawn.Posix.kill
           (Self.pid, Interfaces.C.int (System.OS_Interface.SIGTERM));
    begin
-      pragma Assert (Code = 0);
+      null;
    end Terminate_Process;
 
    --------------------------
