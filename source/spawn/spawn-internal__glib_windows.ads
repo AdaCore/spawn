@@ -27,7 +27,7 @@ private package Spawn.Internal is
 
    type Process is tagged;
 
-   Buffer_Size : constant Ada.Streams.Stream_Element_Count := 512;
+   Buffer_Size : constant Ada.Streams.Stream_Element_Count := 2048;
 
    subtype Stream_Element_Buffer is
      Ada.Streams.Stream_Element_Array (1 .. Buffer_Size);

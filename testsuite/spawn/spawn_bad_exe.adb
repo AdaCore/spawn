@@ -76,6 +76,7 @@ begin
 
    while (for some X of List => X.Proc.Status in Starting | Running) loop
       Spawn.Processes.Monitor_Loop (0.001);
+      delay 0.5;
    end loop;
 
    if (for some X of List => X.Wrong or X.Error /= List (1).Error) then

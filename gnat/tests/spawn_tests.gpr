@@ -10,7 +10,7 @@ project Spawn_Tests is
 
    Main :=
      ("spawn_test.adb", "spawn_unexpected.adb", "spawn_stty.adb",
-      "wait_all.adb", "spawn_bad_exe.adb");
+      "wait_all.adb", "spawn_bad_exe.adb", "check_cmd");
 
    case Spawn.OS_API is
       when "unix" | "osx" =>
