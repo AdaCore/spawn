@@ -7,7 +7,6 @@
 with Ada.Containers.Synchronized_Queue_Interfaces;
 with Ada.Containers.Unbounded_Synchronized_Queues;
 with Ada.Containers.Vectors;
-with Ada.Text_IO;
 with Ada.Unchecked_Deallocation;
 
 pragma Warnings (Off);
