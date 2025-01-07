@@ -7,6 +7,7 @@
 with Ada.Containers.Synchronized_Queue_Interfaces;
 with Ada.Containers.Unbounded_Synchronized_Queues;
 with Ada.Containers.Vectors;
+with Ada.Text_IO;
 with Ada.Unchecked_Deallocation;
 
 pragma Warnings (Off);
@@ -143,6 +144,10 @@ package body Spawn.Internal.Monitor is
          Process   : Process_Access;
 
       begin
+         if fds = null then
+            return;
+         end if;
+
          loop
             Result := Windows_API.WaitForMultipleObjectsEx
               (nCount         => Windows_API.DWORD (Last),

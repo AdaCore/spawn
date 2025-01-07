@@ -4,6 +4,7 @@
 --  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 --
 
+with Ada.Strings.Wide_Maps;
 with Ada.Characters.Wide_Latin_1;
 with Ada.Strings.UTF_Encoding.Wide_Strings;
 with Ada.Strings.Wide_Fixed;
@@ -74,12 +75,14 @@ package body Spawn.Internal.Windows is
 
       use Ada.Strings.Wide_Unbounded;
 
-      Quotation_Check_Pattern : constant Wide_String :=
-        Ada.Characters.Wide_Latin_1.Space
-        & Ada.Characters.Wide_Latin_1.Quotation
-        & Ada.Characters.Wide_Latin_1.LF
-        & Ada.Characters.Wide_Latin_1.HT
-        & Ada.Characters.Wide_Latin_1.VT;
+      Quotation_Check_Pattern : constant
+        Ada.Strings.Wide_Maps.Wide_Character_Set :=
+          Ada.Strings.Wide_Maps.To_Set
+            (Ada.Characters.Wide_Latin_1.Space
+             & Ada.Characters.Wide_Latin_1.Quotation
+             & Ada.Characters.Wide_Latin_1.LF
+             & Ada.Characters.Wide_Latin_1.HT
+             & Ada.Characters.Wide_Latin_1.VT);
 
       S : constant Wide_String := Ada.Strings.UTF_Encoding.Wide_Strings.Decode
         (Argument);
@@ -89,7 +92,7 @@ package body Spawn.Internal.Windows is
 
    begin
       if S'Length /= 0
-        and then Ada.Strings.Wide_Fixed.Index (S, Quotation_Check_Pattern) /= 0
+        and then Ada.Strings.Wide_Fixed.Index (S, Quotation_Check_Pattern) = 0
       then
          --  Don't quote unless we actually need to do so - hopefully avoid
          --  problems if programs won't parse quotes properly.
@@ -340,6 +343,10 @@ package body Spawn.Internal.Windows is
 
                Pipe_Count := Pipe_Count + 1;
 
+               --  The nOutBufferSize & nInBufferSize below are needed to have
+               --  some space for data to prevent byte-by-byte reading which
+               --  is too slow.
+
                Parent_Handle := Windows_API.CreateNamedPipeA
                  (lpName               => Pipe_Name,
                   dwOpenMode           =>
@@ -349,8 +356,8 @@ package body Spawn.Internal.Windows is
                       + Windows_API.PIPE_WAIT
                       + Windows_API.PIPE_REJECT_REMOTE_CLINETS,
                   nMaxInstances        => 1,
-                  nOutBufferSize       => 0,
-                  nInBufferSize        => 0,
+                  nOutBufferSize       => 2048,
+                  nInBufferSize        => 2048,
                   nDefaultTimeOut      => 0,
                   lpSecurityAttributes => Dont_Inherit_Handle'Access);
 
@@ -570,6 +577,7 @@ package body Spawn.Internal.Windows is
              (Work_Directory));
    begin
       if not Create_Pipes (Start'Access) then
+         Self.Status := Not_Running;
          return;
       end if;
 
@@ -587,6 +595,7 @@ package body Spawn.Internal.Windows is
             lpStartupInfo        => Start'Access,
             lpProcessInformation => Self.pid'Access))
       then
+         Self.Status := Not_Running;
          return;
       end if;
 
