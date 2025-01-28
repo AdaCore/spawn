@@ -53,16 +53,16 @@ private package Spawn.Internal is
       --  For Stdin, when Last > Buffer'Last that means write operation in
       --  progress (for Buffer (1 .. Last-Buffer'Length)) and we should send a
       --  notification on complete.
-
    end record;
 
    type Pipe_Array is array (Pipe_Kinds) of aliased Context;
    --  Context for each pipe kind
 
    type Process is new Spawn.Common.Process with record
-      pid   : aliased Windows_API.PROCESS_INFORMATION;
-      pipe  : Pipe_Array;
-      Index : Natural := 0;
+      pid    : aliased Windows_API.PROCESS_INFORMATION;
+      pipe   : Pipe_Array;
+      Index  : Natural := 0;
+      On_Die : Boolean := False;
    end record;
    --  Process implementation type provides the same interface as
    --  Spawn.Processes.Process type.
