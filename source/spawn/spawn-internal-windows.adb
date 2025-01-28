@@ -14,7 +14,6 @@ with Ada.Unchecked_Conversion;
 with Interfaces.C.Strings;
 
 pragma Warnings (Off);
-with Spawn.Process_Listeners;
 with System.OS_Interface;
 with System.Win32;
 pragma Warnings (On);
