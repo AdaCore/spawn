@@ -61,6 +61,7 @@ private package Spawn.Internal is
       Event     : Glib.Main.G_Source_Id := 0;
       pid       : aliased Windows_API.PROCESS_INFORMATION;
       pipe      : Pipe_Array;
+      On_Die    : Boolean := False;
    end record;
    --  Process implementation type provides the same interface as
    --  Spawn.Processes.Process type.

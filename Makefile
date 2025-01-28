@@ -11,7 +11,7 @@ GPRINSTALL_FLAGS = --prefix=$(PREFIX) --sources-subdir=$(INSTALL_INCLUDE_DIR)\
  --lib-subdir=$(INSTALL_ALI_DIR) --project-subdir=$(INSTALL_PROJECT_DIR)\
  --link-lib-subdir=$(INSTALL_LIBRARY_DIR)
 
-SPAWN_TESTS=spawn_test spawn_unexpected wait_all spawn_bad_exe check_cmd
+SPAWN_TESTS=spawn_test spawn_unexpected wait_all spawn_bad_exe check_cmd check_die
 
 ifneq ($(OS),Windows_NT)
    SPAWN_TESTS += spawn_kill spawn_stty

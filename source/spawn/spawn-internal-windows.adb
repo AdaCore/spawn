@@ -810,8 +810,15 @@ package body Spawn.Internal.Windows is
       Exit_Code : aliased Windows_API.DWORD := 0;
 
    begin
-      --  Close stdio pipes
+      Self.On_Die := True;
 
+      --  Last chance to load data from pipes. We will close the pipes below
+      --  and (at least on Windows) we can't get the last portion of data
+      --  after this.
+      Self.Emit_Stdout_Available;
+      Self.Emit_Stderr_Available;
+
+      --  Close stdio pipes
       for J in Self.pipe'Range loop
          Do_Close_Pipe (Self, J);
       end loop;
@@ -873,6 +880,7 @@ package body Spawn.Internal.Windows is
          then
             Self.Status := Not_Running;
             Self.Emit_Finished (Self.Exit_Status, Self.Exit_Code);
+
          else
             Self.Pending_Finish := True;
          end if;

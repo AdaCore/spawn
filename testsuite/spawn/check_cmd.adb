@@ -57,12 +57,12 @@ begin
    for J in 1 .. 6 loop
       Spawn.Processes.Monitor_Loop (0.001);
       delay 0.5;
-
-      if Listener.Process.Status = Not_Running then
-         --  Success
-         return;
-      end if;
+      exit when Listener.Process.Status = Not_Running;
    end loop;
+
+   if Listener.Process.Status /= Not_Running then
+      raise Program_Error;
+   end if;
 
    --  Some process is till running
    Ada.Command_Line.Set_Exit_Status
