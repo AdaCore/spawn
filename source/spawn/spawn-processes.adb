@@ -14,7 +14,7 @@ package body Spawn.Processes is
 
    procedure Close_Standard_Error (Self : in out Process'Class) is
    begin
-      Self.Interal.Close_Standard_Error;
+      Self.Internal.Close_Standard_Error;
    end Close_Standard_Error;
 
    --------------------------
@@ -23,7 +23,7 @@ package body Spawn.Processes is
 
    procedure Close_Standard_Input (Self : in out Process'Class) is
    begin
-      Self.Interal.Close_Standard_Input;
+      Self.Internal.Close_Standard_Input;
    end Close_Standard_Input;
 
    ---------------------------
@@ -32,7 +32,7 @@ package body Spawn.Processes is
 
    procedure Close_Standard_Output (Self : in out Process'Class) is
    begin
-      Self.Interal.Close_Standard_Output;
+      Self.Internal.Close_Standard_Output;
    end Close_Standard_Output;
 
    ------------------
@@ -42,7 +42,7 @@ package body Spawn.Processes is
    procedure Kill_Process (Self : in out Process'Class) is
    begin
       if Self.Status = Running then
-         Self.Interal.Kill_Process;
+         Self.Internal.Kill_Process;
       end if;
    end Kill_Process;
 
@@ -62,7 +62,7 @@ package body Spawn.Processes is
          return;
       end if;
 
-      Self.Interal.Read_Standard_Error (Data, Last, Success);
+      Self.Internal.Read_Standard_Error (Data, Last, Success);
    end Read_Standard_Error;
 
    --------------------------
@@ -81,7 +81,7 @@ package body Spawn.Processes is
          return;
       end if;
 
-      Self.Interal.Read_Standard_Output (Data, Last, Success);
+      Self.Internal.Read_Standard_Output (Data, Last, Success);
    end Read_Standard_Output;
 
    -------------------
@@ -92,7 +92,7 @@ package body Spawn.Processes is
      (Self      : in out Process'Class;
       Arguments : Spawn.String_Vectors.UTF_8_String_Vector) is
    begin
-      Self.Interal.Set_Arguments (Arguments);
+      Self.Internal.Set_Arguments (Arguments);
    end Set_Arguments;
 
    ---------------------
@@ -103,7 +103,7 @@ package body Spawn.Processes is
      (Self        : in out Process'Class;
       Environment : Spawn.Environments.Process_Environment) is
    begin
-      Self.Interal.Set_Environment (Environment);
+      Self.Internal.Set_Environment (Environment);
    end Set_Environment;
 
    ------------------
@@ -114,7 +114,7 @@ package body Spawn.Processes is
      (Self     : in out Process'Class;
       Listener : Spawn.Process_Listeners.Process_Listener_Access) is
    begin
-      Self.Interal.Set_Listener (Listener);
+      Self.Internal.Set_Listener (Listener);
    end Set_Listener;
 
    -----------------
@@ -125,7 +125,7 @@ package body Spawn.Processes is
      (Self    : in out Process'Class;
       Program : UTF_8_String) is
    begin
-      Self.Interal.Set_Program (Program);
+      Self.Internal.Set_Program (Program);
    end Set_Program;
 
    ----------------------------
@@ -134,7 +134,7 @@ package body Spawn.Processes is
 
    procedure Set_Standard_Error_PTY (Self : in out Process'Class) is
    begin
-      Self.Interal.Set_Standard_Error_PTY;
+      Self.Internal.Set_Standard_Error_PTY;
    end Set_Standard_Error_PTY;
 
    ----------------------------
@@ -143,7 +143,7 @@ package body Spawn.Processes is
 
    procedure Set_Standard_Input_PTY (Self : in out Process'Class) is
    begin
-      Self.Interal.Set_Standard_Input_PTY;
+      Self.Internal.Set_Standard_Input_PTY;
    end Set_Standard_Input_PTY;
 
    -----------------------------
@@ -152,7 +152,7 @@ package body Spawn.Processes is
 
    procedure Set_Standard_Output_PTY (Self : in out Process'Class) is
    begin
-      Self.Interal.Set_Standard_Output_PTY;
+      Self.Internal.Set_Standard_Output_PTY;
    end Set_Standard_Output_PTY;
 
    ---------------------------
@@ -162,7 +162,7 @@ package body Spawn.Processes is
    procedure Set_Working_Directory
      (Self : in out Process'Class; Directory : UTF_8_String) is
    begin
-      Self.Interal.Set_Working_Directory (Directory);
+      Self.Internal.Set_Working_Directory (Directory);
    end Set_Working_Directory;
 
    -----------
@@ -171,7 +171,7 @@ package body Spawn.Processes is
 
    procedure Start (Self : in out Process'Class) is
    begin
-      Self.Interal.Start;
+      Self.Internal.Start;
    end Start;
 
    -----------------------
@@ -180,7 +180,7 @@ package body Spawn.Processes is
 
    procedure Terminate_Process (Self : in out Process'Class) is
    begin
-      Self.Interal.Terminate_Process;
+      Self.Internal.Terminate_Process;
    end Terminate_Process;
 
    --------------------------
@@ -199,7 +199,7 @@ package body Spawn.Processes is
          return;
       end if;
 
-      Self.Interal.Write_Standard_Input (Data, Last, Success);
+      Self.Internal.Write_Standard_Input (Data, Last, Success);
    end Write_Standard_Input;
 
 end Spawn.Processes;
