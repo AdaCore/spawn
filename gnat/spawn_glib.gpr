@@ -1,5 +1,5 @@
 --
---  Copyright (C) 2018-2023, AdaCore
+--  Copyright (C) 2018-2026, AdaCore
 --
 --  SPDX-License-Identifier: Apache-2.0
 --
@@ -20,12 +20,15 @@ library project Spawn_Glib is
    Build_Mode : Spawn_Glib_Build_Kind :=
      external ("SPAWN_GLIB_BUILD_MODE", external ("BUILD_MODE", "prod"));
 
-   for Library_Kind use Library_Type;
-   for Object_Dir   use "../.obj/spawn_glib/" & Library_Type;
-   for Library_Dir  use "../.libs/spawn_glib/" & Library_Type;
-   for Library_Name use "spawn_glib";
-   for Source_Dirs use ("../source/spawn");
    for Languages use ("Ada", "c");
+
+   for Library_Kind use Library_Type;
+   for Library_Name use "spawn_glib";
+   for Run_Path_Option use ();
+
+   for Object_Dir use "../.obj/spawn_glib/" & Library_Type;
+   for Library_Dir use "../.libs/spawn_glib/" & Library_Type;
+   for Source_Dirs use ("../source/spawn");
 
    case Library_Type is
       when "relocatable" =>

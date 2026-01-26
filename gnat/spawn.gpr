@@ -1,5 +1,5 @@
 --
---  Copyright (C) 2018-2023, AdaCore
+--  Copyright (C) 2018-2026, AdaCore
 --
 --  SPDX-License-Identifier: Apache-2.0
 --
@@ -21,12 +21,15 @@ library project Spawn is
 
    Superproject := external ("SUPERPROJECT", "");
 
-   for Library_Kind use Library_Type;
-   for Object_Dir   use "../.obj/" & Superproject & "/spawn/" & Library_Type;
-   for Library_Dir  use "../.libs/" & Superproject & "/spawn/" & Library_Type;
-   for Library_Name use "spawn";
-   for Source_Dirs use ("../source/spawn");
    for Languages use ("Ada", "c");
+
+   for Library_Kind use Library_Type;
+   for Library_Name use "spawn";
+   for Run_Path_Option use ();
+
+   for Object_Dir use "../.obj/" & Superproject & "/spawn/" & Library_Type;
+   for Library_Dir use "../.libs/" & Superproject & "/spawn/" & Library_Type;
+   for Source_Dirs use ("../source/spawn");
 
    Common_Excluded :=
      ("spawn-channels__glib_posix.ads", "spawn-channels__glib_posix.adb");
