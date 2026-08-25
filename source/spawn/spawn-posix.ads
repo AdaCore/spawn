@@ -1,10 +1,11 @@
 --
---  Copyright (C) 2018-2022, AdaCore
+--  Copyright (C) 2018-2026, AdaCore
 --
 --  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 --
 
 with Ada.Streams;
+with Interfaces.C.Pointers;
 with Interfaces.C.Strings;
 
 package Spawn.Posix is
@@ -130,10 +131,14 @@ package Spawn.Posix is
    TIOCSCTTY : constant Interfaces.C.int
      with Import, Convention => C, External_Name => "SPAWN_TIOCSCTTY";
 
-   subtype constrained_chars_ptr_array is
-     Interfaces.C.Strings.chars_ptr_array (1 .. Interfaces.C.size_t'Last);
+   package chars_ptr_pointers is
+     new Interfaces.C.Pointers
+     (Index              => Interfaces.C.size_t,
+      Element            => Interfaces.C.Strings.chars_ptr,
+      Element_Array      => Interfaces.C.Strings.chars_ptr_array,
+      Default_Terminator => null);
 
-   environ : constrained_chars_ptr_array
+   environ : chars_ptr_pointers.Pointer
      with Import, Convention => C, External_Name => "environ";
 
    --  Errno values
