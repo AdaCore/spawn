@@ -14,11 +14,16 @@ procedure Initialize_Default
   (Default : out Spawn.Environments.Process_Environment)
 is
    use type Interfaces.C.Strings.chars_ptr;
+   use type Spawn.Posix.chars_ptr_pointers.Pointer;
 
    item : Spawn.Posix.chars_ptr_pointers.Pointer :=
      Spawn.Posix.environ;
 
 begin
+   if item = null then
+      return;
+   end if;
+
    loop
       exit when item.all = Interfaces.C.Strings.Null_Ptr;
 
