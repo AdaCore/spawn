@@ -143,6 +143,10 @@ package body Spawn.Internal.Monitor is
          Process   : Process_Access;
 
       begin
+         if fds = null then
+            return;
+         end if;
+
          loop
             Result := Windows_API.WaitForMultipleObjectsEx
               (nCount         => Windows_API.DWORD (Last),

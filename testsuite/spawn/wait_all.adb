@@ -7,7 +7,6 @@
 --  Spawn several subprocess and wait all of them is finished.
 
 with Ada.Command_Line;
-with Ada.Calendar;
 with Ada.Directories;
 
 with Spawn.String_Vectors;
@@ -32,17 +31,8 @@ procedure Wait_All is
 begin
    if Ada.Command_Line.Argument_Count > 0 then
       --  Child process: wait next second boundary and exit
-      declare
-         Seconds : constant Duration :=
-           Ada.Calendar.Seconds (Ada.Calendar.Clock);
-
-         Sleep   : constant Duration :=
-          Duration (Integer (Seconds + 0.5)) - Seconds;
-      begin
-         delay Sleep;
-
-         return;
-      end;
+      delay 0.5;
+      return;
    end if;
 
    Args.Append ("wait");
@@ -54,7 +44,8 @@ begin
       Item.Process.Start;
    end loop;
 
-   for J in 1 .. 6 loop
+   for J in 1 .. 15 loop --  J should be > 10 because we check processes
+      --  stopping one by one.
       Spawn.Processes.Monitor_Loop (0.001);
       delay 0.5;
 

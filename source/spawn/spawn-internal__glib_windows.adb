@@ -259,7 +259,9 @@ package body Spawn.Internal is
             lpOverlapped         => Pipe'Access,
             lpCompletionRoutine  => Callback (Kind));
 
-         if Ok = System.Win32.FALSE then
+         if not Self.On_Die
+           and then Ok = System.Win32.FALSE
+         then
             case Kind is
                when Stderr =>
                   Self.Emit_Standard_Error_Stream_Error
