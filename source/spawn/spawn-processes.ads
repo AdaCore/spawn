@@ -204,38 +204,38 @@ package Spawn.Processes is
 private
 
    type Process is tagged limited record
-      Interal : Spawn.Internal.Process;
+      Internal : Spawn.Internal.Process;
    end record;
 
    function Arguments (Self : Process'Class)
      return Spawn.String_Vectors.UTF_8_String_Vector is
-       (Self.Interal.Arguments);
+       (Self.Internal.Arguments);
 
    function Environment (Self : Process'Class)
      return Spawn.Environments.Process_Environment is
-       (Self.Interal.Environment);
+       (Self.Internal.Environment);
 
    function Working_Directory (Self : Process'Class) return UTF_8_String is
-     (Self.Interal.Working_Directory);
+     (Self.Internal.Working_Directory);
 
    function Program (Self : Process'Class) return UTF_8_String is
-     (Self.Interal.Program);
+     (Self.Internal.Program);
 
    function Status (Self : Process'Class) return Process_Status is
-     (Self.Interal.Status);
+     (Self.Internal.Status);
 
    function Exit_Status (Self : Process'Class) return Process_Exit_Status is
-     (Self.Interal.Exit_Status);
+     (Self.Internal.Exit_Status);
    --  Return the exit status of last process that finishes.
 
    function Exit_Code (Self : Process'Class) return Process_Exit_Code is
-     (Self.Interal.Exit_Code);
+     (Self.Internal.Exit_Code);
 
    function Listener (Self : Process'Class)
      return Spawn.Process_Listeners.Process_Listener_Access is
-       (Self.Interal.Listener);
+       (Self.Internal.Listener);
 
    function Identifier (Self : Process'Class) return String is
-      (Spawn.Internal.Identifier (Self.Interal));
+      (Spawn.Internal.Identifier (Self.Internal));
 
 end Spawn.Processes;

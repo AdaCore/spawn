@@ -19,7 +19,7 @@ endif
 
 all:
 	gprbuild $(GPRBUILD_FLAGS) -P gnat/spawn.gpr
-	gprbuild $(GPRBUILD_FLAGS) -P gnat/tests/spawn_tests.gpr -XSPAWN_LIBRARY_TYPE=static
+	gprbuild $(GPRBUILD_FLAGS) -aP gnat -P gnat/tests/spawn_tests.gpr -XSPAWN_LIBRARY_TYPE=static
 
 check:
 	export LD_LIBRARY_PATH=.libs/spawn/relocatable; \
